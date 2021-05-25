@@ -1,0 +1,105 @@
+---
+title: "format_data"
+author: "Dan Weinberger"
+date: "5/25/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+library(reshape2)
+library(dplyr)
+```
+
+```{r}
+
+ a1 <-read_excel("./Data/A143_scope_2021_05_11.xlsx", skip=19)
+ a2 <-read_excel("./Data/A144_scope_2021_05_12.xlsx", skip=19)
+
+ a3 <-read_excel("./Data/A145_scope_2021_05_12.xlsx", skip=19)
+ a4 <-read_excel("./Data/A146_scope_2021_05_17.xlsx", skip=19)
+ a5 <-read_excel("./Data/A147_scope_2021_05_17.xlsx", skip=19)
+ a6 <-read_excel("./Data/A148_scope_2021_05_19.xlsx", skip=19)
+ a7 <-read_excel("./Data/A149_scope_2021_05_19.xlsx", skip=19)
+ a8 <-read_excel("./Data/A150_scope_2021_05_24.xlsx", skip=19)
+ #a6 <-read_excel("./Data/A147-A148_2021_05_24.xlsx", skip=19)
+
+all.res <- list(a1,a2,a3,a4,a5,a6,a7,a8)
+all.res <- lapply(1:length(all.res), function(x){ all.res[[x]]$plate= x 
+return(all.res[[x]])
+}) 
+
+b1 <- bind_rows(all.res)
+
+b1 <- b1[b1$Content!='Std',]
+
+b1$Target[is.na(b1$Target)] <- b1$`Biological Set Name`[is.na(b1$Target)]
+
+b1$Target <- tolower(b1$Target)
+
+b1$Sample[is.na(b1$Sample)] <- b1$`sample id`[is.na(b1$Sample)]
+
+b1 <-b1[!is.na(b1$Sample),]
+
+b1$Sample <- round(as.numeric(b1$Sample),1)
+
+b1 <- b1[b1$Sample>0 & !is.na(b1$Sample),]
+
+c1 <- b1[, c('Sample','Cq','Target','plate')]
+
+c1$Cq[is.na(c1$Cq)] <- 45
+
+c1.m <- reshape2::melt(c1, id.vars= c('Sample','Target','plate'))
+
+c1.c <- reshape2::dcast(c1.m, Sample+plate ~ Target, fill=NA)
+
+
+c1.c$pos <- c1.c$lyta<40 & c1.c$piab<40
+```
+
+
+#TO REVIEW
+3.1 is positive for lytA and piaB (Ct=2 for both); 3.4 is positive(36, 32); 3.2 and 3.3 both highly positive for piaB (26 and 20), but lytA not yet tested;
+Test person 4 lytA again, especially 4.1
+
+Person 33 positive time 1 (ct=30); also pos by piaB at time 2 and 3 (29 and 27); still need lytA for 33.2, 33.3; 
+--HH member 34 is positive weakly for piaB at time 2 (ct=38;34.2);lytA not yet tested 
+
+Person 41 strong pos at first 3 time points (16,22,27); not yet tested for lytA at time 2 and 3
+--HH pair 42 is pos for piaB, neg lytA at 42.1...could retest both lytA and piaB to conifrm
+
+Person 65 positive for piaB (Ct 37)--not yet tested for lytA
+
+Person 78.2, positive piaB (ct=39), not yet tested lytA
+
+79.3--positive lytA and piaB at time 3, not at previous times (times 4-6 not yet tested)
+
+92.1--positive lytA and piaB, not at subsequent times, partner not positive.
+
+To repeat: 4.1,34.2,43.3, 44.1, 45.1,77.3
+
+
+
+
+
+
+```{r}
+plot(a1$lytA,a1$piaB)
+plot(a1$`lyta Repeated`,a1$`piaB repeated`)
+plot(a1$`lyta Repeated`,a1$lytA)
+
+plot(a1$`piaB repeated`,a1$piaB)
+
+```
+
+
+```{r}
+b1.m <- melt(b1, id.vars=c('hh','timeline','full_id'))
+
+b1.c <- acast(b1.m, timeline~hh~full_id, fill=NA)
+
+```
+
+
+
