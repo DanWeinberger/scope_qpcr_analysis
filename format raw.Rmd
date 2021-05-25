@@ -23,9 +23,9 @@ library(dplyr)
  a6 <-read_excel("./Data/A148_scope_2021_05_19.xlsx", skip=19)
  a7 <-read_excel("./Data/A149_scope_2021_05_19.xlsx", skip=19)
  a8 <-read_excel("./Data/A150_scope_2021_05_24.xlsx", skip=19)
- #a6 <-read_excel("./Data/A147-A148_2021_05_24.xlsx", skip=19)
+ #a9 <-read_excel("./Data/A147-A148_2021_05_24.xlsx", skip=19) #Curves on this look funky
 
-all.res <- list(a1,a2,a3,a4,a5,a6,a7,a8)
+all.res <- list(a1,a2,a3,a4,a5,a6,a7,a8, a9)
 all.res <- lapply(1:length(all.res), function(x){ all.res[[x]]$plate= x 
 return(all.res[[x]])
 }) 
@@ -56,6 +56,9 @@ c1.c <- reshape2::dcast(c1.m, Sample+plate ~ Target, fill=NA)
 
 
 c1.c$pos <- c1.c$lyta<40 & c1.c$piab<40
+
+write.csv(c1.c, './Data/cleaned_file.csv')
+
 ```
 
 
