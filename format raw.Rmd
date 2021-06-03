@@ -24,8 +24,13 @@ library(dplyr)
  a7 <-read_excel("./Data/A149_scope_2021_05_19.xlsx", skip=19)
  a8 <-read_excel("./Data/A150_scope_2021_05_24.xlsx", skip=19)
  #a9 <-read_excel("./Data/A147-A148_2021_05_24.xlsx", skip=19) #Curves on this look funky
+ a9 <-read_excel("./Data/A153_scope_2021_05_29.xlsx", skip=19) 
+ a10 <- read_excel("./Data/A154_2021_-06_02.xlsx repeat.xlsx",skip=19)
+ a11 <- read_excel("./Data/A155_2021_06_02.xlsx",skip=19)
+ a12 <- read_excel("./Data/A156_scope_2021_06_03.xlsx",skip=19)
 
-all.res <- list(a1,a2,a3,a4,a5,a6,a7,a8, a9)
+ 
+all.res <- list(a1,a2,a3,a4,a5,a6,a7,a8,a9, a10, a11,a12)
 all.res <- lapply(1:length(all.res), function(x){ all.res[[x]]$plate= x 
 return(all.res[[x]])
 }) 
@@ -88,11 +93,8 @@ To repeat: 4.1,34.2,43.3, 44.1, 45.1,77.3
 
 
 ```{r}
-plot(a1$lytA,a1$piaB)
-plot(a1$`lyta Repeated`,a1$`piaB repeated`)
-plot(a1$`lyta Repeated`,a1$lytA)
+#plot(c1.c$lytA,c1.c$piaB)
 
-plot(a1$`piaB repeated`,a1$piaB)
 
 ```
 
