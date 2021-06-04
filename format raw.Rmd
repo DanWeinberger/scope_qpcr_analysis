@@ -23,14 +23,17 @@ library(dplyr)
  a6 <-read_excel("./Data/A148_scope_2021_05_19.xlsx", skip=19)
  a7 <-read_excel("./Data/A149_scope_2021_05_19.xlsx", skip=19)
  a8 <-read_excel("./Data/A150_scope_2021_05_24.xlsx", skip=19)
- #a9 <-read_excel("./Data/A147-A148_2021_05_24.xlsx", skip=19) #Curves on this look funky
  a9 <-read_excel("./Data/A153_scope_2021_05_29.xlsx", skip=19) 
  a10 <- read_excel("./Data/A154_2021_-06_02.xlsx repeat.xlsx",skip=19)
  a11 <- read_excel("./Data/A155_2021_06_02.xlsx",skip=19)
  a12 <- read_excel("./Data/A156_scope_2021_06_03.xlsx",skip=19)
-
+ a13 <- read_excel("./Data/A151_scope_2021_05_29 repeat lyta.xlsx", skip=19)
+ a14 <- read_excel("./Data/A146_scope_2021_06_03 lyta.xlsx", skip=19) 
  
-all.res <- list(a1,a2,a3,a4,a5,a6,a7,a8,a9, a10, a11,a12)
+ 
+  #XX <-read_excel("./Data/A147-A148_2021_05_24.xlsx", skip=19) #Curves on this look funky
+
+all.res <- list(a1,a2,a3,a4,a5,a6,a7,a8,a9, a10, a11,a12, a13,a14)
 all.res <- lapply(1:length(all.res), function(x){ all.res[[x]]$plate= x 
 return(all.res[[x]])
 }) 
@@ -63,6 +66,38 @@ c1.c <- reshape2::dcast(c1.m, Sample+plate ~ Target, fill=NA)
 c1.c$pos <- c1.c$lyta<40 & c1.c$piab<40
 
 write.csv(c1.c, './Data/cleaned_file.csv')
+
+```
+
+
+```{r}
+
+c1.m$ID <- sub("\\.[0-9]+$", "", c1.m$Sample)
+c1.m$ID <- as.numeric(as.character(c1.m$ID))
+c1.m <- c1.m[order(c1.m$ID, c1.m$time),]
+c1.m$time <- sub('.*\\.', '', c1.m$Sample)
+
+d1 <- dcast(c1.m[,c('ID','Target','time','value')],  ID +Target ~ time, fun.aggregate = min, na.rm=T)
+
+d1$posN <- apply(d1[,-c(1:2)],1, function(x) sum(x<40))
+
+d1.array <- acast(c1.m[,c('ID','Target','time','value')],  ID ~ Target ~ time, fun.aggregate = min, na.rm=T)
+
+
+pos.piaB <- t(apply(d1.array[,2,],c(1) , function(x) x<40 ))
+pos.lytA <- t(apply(d1.array[,1,],c(1) , function(x) x<40 ))
+pos.both <- pos.piaB * pos.lytA
+
+#How many people are positive for piaB at least once?
+N.people.pos.piaB <- sum(apply(pos.piaB,1,function(x) sum(x)>0))
+N.people.pos.piaB
+
+#How many people are positive for piaB AND lytA at least once?
+N.people.pos.both <- sum(apply(pos.both,1,function(x) sum(x)>0))
+N.people.pos.both
+
+#How many time points are people positive for piaB?
+
 
 ```
 
