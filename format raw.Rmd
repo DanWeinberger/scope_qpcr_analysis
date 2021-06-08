@@ -76,10 +76,18 @@ write.csv(c1.c, './Data/cleaned_file.csv')
 
 c1.m$ID <- sub("\\.[0-9]+$", "", c1.m$Sample)
 c1.m$ID <- as.numeric(as.character(c1.m$ID))
-c1.m <- c1.m[order(c1.m$ID, c1.m$time),]
 c1.m$time <- sub('.*\\.', '', c1.m$Sample)
 
+c1.m <- c1.m[order(c1.m$ID, c1.m$time),]
+
 d1 <- dcast(c1.m[,c('ID','Target','time','value')],  ID +Target ~ time, fun.aggregate = min, na.rm=T)
+
+write.csv(d1, './Data/Result1.csv')
+
+d1.alt <- dcast(c1.m[,c('ID','Target','time','value')],  ID +time~ Target, fun.aggregate = min, na.rm=T)
+
+write.csv(d1.alt, './Data/Result2.csv')
+
 
 d1$posN <- apply(d1[,-c(1:2)],1, function(x) sum(x<40))
 
