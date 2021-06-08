@@ -30,11 +30,12 @@ library(dplyr)
  a13 <- read_excel("./Data/A151_scope_2021_05_29 repeat lyta.xlsx", skip=19)
  a14 <- read_excel("./Data/A146_scope_2021_06_03 lyta.xlsx", skip=19) 
 a15 <- read_excel("./Data/A157_SCOPE_2021_06_07_AT.xlsx") 
-
+a16 <- read_excel('./Data/A157_scope_2021_06_08 lyta-piaB repeat.xlsx', skip=19)
  
+
   #XX <-read_excel("./Data/A147-A148_2021_05_24.xlsx", skip=19) #Curves on this look funky
 
-all.res <- list(a1,a2,a3,a4,a5,a6,a7,a8,a9, a10, a11,a12, a13,a14, a15)
+all.res <- list(a1,a2,a3,a4,a5,a6,a7,a8,a9, a10, a11,a12, a13,a14, a15, a16)
 
 all.res <- lapply(1:length(all.res), function(x){ all.res[[x]]$plate= x 
 return(all.res[[x]])
@@ -86,7 +87,7 @@ write.csv(d1, './Data/Result1.csv')
 
 d1.alt <- dcast(c1.m[,c('ID','Target','time','value')],  ID +time~ Target, fun.aggregate = min, na.rm=T)
 
-write.csv(d1.alt, './Data/Result2.csv')
+write.csv(d1.alt, './Data/Result2.csv') #Anne's preferred format
 
 
 d1$posN <- apply(d1[,-c(1:2)],1, function(x) sum(x<40))
