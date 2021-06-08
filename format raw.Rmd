@@ -90,26 +90,6 @@ d1.alt <- dcast(c1.m[,c('ID','Target','time','value')],  ID +time~ Target, fun.a
 write.csv(d1.alt, './Data/Result2.csv') #Anne's preferred format
 
 
-d1$posN <- apply(d1[,-c(1:2)],1, function(x) sum(x<40))
-
-d1.array <- acast(c1.m[,c('ID','Target','time','value')],  ID ~ Target ~ time, fun.aggregate = min, na.rm=T)
-
-
-pos.piaB <- t(apply(d1.array[,2,],c(1) , function(x) x<40 ))
-pos.lytA <- t(apply(d1.array[,1,],c(1) , function(x) x<40 ))
-pos.both <- pos.piaB * pos.lytA
-
-#How many people are positive for piaB at least once?
-N.people.pos.piaB <- sum(apply(pos.piaB,1,function(x) sum(x)>0))
-N.people.pos.piaB
-
-#How many people are positive for piaB AND lytA at least once?
-N.people.pos.both <- sum(apply(pos.both,1,function(x) sum(x)>0))
-N.people.pos.both
-
-#How many time points are people positive for piaB?
-
-
 ```
 
 
