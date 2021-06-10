@@ -10,10 +10,20 @@ knitr::opts_chunk$set(echo = TRUE)
 library(readxl)
 library(reshape2)
 library(dplyr)
+library(stringr)
+
+library(pheatmap)
+library(RColorBrewer)
+library(cowplot)
+library(gridExtra)
+library(ggplotify)
+library(patchwork)
+source('heat.fun.R')
+
 ```
 
 ```{r}
-
+ key1 <- read.csv('./Data/hh_id_key.csv')
  a1 <-read_excel("./Data/A143_scope_2021_05_11.xlsx", skip=19)
  a2 <-read_excel("./Data/A144_scope_2021_05_12.xlsx", skip=19)
 
@@ -32,12 +42,13 @@ library(dplyr)
 a15 <- read_excel("./Data/A157_SCOPE_2021_06_07_AT.xlsx") 
 a16 <- read_excel('./Data/A157_scope_2021_06_08 lyta-piaB repeat.xlsx', skip=19)
 a17 <- read_excel('./Data/A149_scope_2021_06_08_lyta.pltd.xlsx', skip=19)
+a18 <-  read_excel('./Data/A149_scope_2021_06_09_lytarepeat.pltd.xlsx', skip=19)
   
   
 
   #XX <-read_excel("./Data/A147-A148_2021_05_24.xlsx", skip=19) #Curves on this look funky
 
-all.res <- list(a1,a2,a3,a4,a5,a6,a7,a8,a9, a10, a11,a12, a13,a14, a15, a16, a17)
+all.res <- list(a1,a2,a3,a4,a5,a6,a7,a8,a9, a10, a11,a12, a13,a14, a15, a16, a17, a18)
 
 all.res <- lapply(1:length(all.res), function(x){ all.res[[x]]$plate= x 
 return(all.res[[x]])
@@ -86,6 +97,7 @@ c1.m$ID <- as.numeric(as.character(c1.m$ID))
 c1.m$time <- sub('.*\\.', '', c1.m$Sample)
 
 c1.m <- c1.m[order(c1.m$ID, c1.m$time),]
+c1.m <- merge(c1.m, key1, by.x='ID',by.y='id')
 
 d1 <- dcast(c1.m[,c('ID','Target','time','value')],  ID +Target ~ time, fun.aggregate = min, na.rm=T)
 
@@ -96,47 +108,14 @@ d1.alt <- dcast(c1.m[,c('ID','Target','time','value')],  ID +time~ Target, fun.a
 write.csv(d1.alt, './Data/Result2.csv') #Anne's preferred format
 
 
-```
-
-
-#TO REVIEW
-3.1 is positive for lytA and piaB (Ct=2 for both); 3.4 is positive(36, 32); 3.2 and 3.3 both highly positive for piaB (26 and 20), but lytA not yet tested;
-Test person 4 lytA again, especially 4.1
-
-Person 33 positive time 1 (ct=30); also pos by piaB at time 2 and 3 (29 and 27); still need lytA for 33.2, 33.3; 
---HH member 34 is positive weakly for piaB at time 2 (ct=38;34.2);lytA not yet tested 
-
-Person 41 strong pos at first 3 time points (16,22,27); not yet tested for lytA at time 2 and 3
---HH pair 42 is pos for piaB, neg lytA at 42.1...could retest both lytA and piaB to conifrm
-
-Person 65 positive for piaB (Ct 37)--not yet tested for lytA
-
-Person 78.2, positive piaB (ct=39), not yet tested lytA
-
-79.3--positive lytA and piaB at time 3, not at previous times (times 4-6 not yet tested)
-
-92.1--positive lytA and piaB, not at subsequent times, partner not positive.
-
-To repeat: 4.1,34.2,43.3, 44.1, 45.1,77.3
-
-
-
-
-
-
-```{r}
-#plot(c1.c$lytA,c1.c$piaB)
+d1.a <- acast(c1.m[,c('ID','Target','time','value','Household')], Target ~ ID +Household ~ time, fun.aggregate=min, na.rm=T, fill=9999)
 
 
 ```
 
-
-```{r}
-b1.m <- melt(b1, id.vars=c('hh','timeline','full_id'))
-
-b1.c <- acast(b1.m, timeline~hh~full_id, fill=NA)
+## Heatmaps
+```{r, fig.width=4, fig.height=8}
+piab.plot <- heat.fun(target='piab')
+lyta.plot <- heat.fun(target='lyta')
 
 ```
-
-
-
