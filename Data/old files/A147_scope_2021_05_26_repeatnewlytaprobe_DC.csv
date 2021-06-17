@@ -1,0 +1,68 @@
+File Name,A147_scope_2021_05_26_repeatnewlytaprobe_DC.pcrd,,,,,,
+Created By User,admin,,,,,,
+Notes,,,,,,,
+ID,,,,,,,
+Run Started,05/26/2021 19:17:45 UTC,,,,,,
+Run Ended,05/26/2021 20:33:46 UTC,,,,,,
+Sample Vol,20,,,,,,
+Lid Temp,105,,,,,,
+Protocol File Name,qpcr scope study pfizer 2021.prcl,,,,,,
+Plate Setup File Name,A147_SCOPE_2021_05_26_repeatwithnewlytaprobe.pltd,,,,,,
+Base Serial Number,CT033957,,,,,,
+Optical Head Serial Number,785BR18586,,,,,,
+CFX Maestro Version,5.0.021.0616. ,,,,,,
+,,,,,,,
+Well group,All Wells,,,,,,
+Amplification step,3,,,,,,
+Melt step,,,,,,,
+,,,,,,,
+,,,,,,,
+Well,Fluor,,Content,Sample,Target,Cq,Starting Quantity (SQ)
+A01,FAM,,Unkn,36.2,lyta,26.43865573,144.8353678
+A02,FAM,,Unkn,37.2,lyta,NaN,NaN
+A03,FAM,,Unkn,40.2,lyta,NaN,NaN
+A04,FAM,,Unkn,41.2,lyta,20.38183456,7.147583723
+A05,FAM,,Unkn,42.2,lyta,NaN,NaN
+A06,FAM,,Unkn,43.2,lyta,37.47612385,34844.04537
+A07,FAM,,Unkn,44.2,lyta,NaN,NaN
+A08,FAM,,Unkn,45.2,lyta,NaN,NaN
+A09,FAM,,Unkn,46.2,lyta,NaN,NaN
+A10,FAM,,Unkn,47.2,lyta,NaN,NaN
+A11,FAM,,Unkn,50.2,lyta,25.07631254,73.6137484
+A12,FAM,,Unkn,51.2,lyta,36.80744468,24995.7328
+B01,FAM,,Unkn,52.2,lyta,NaN,NaN
+B02,FAM,,Unkn,53.2,lyta,NaN,NaN
+B03,FAM,,Unkn,54.2,lyta,NaN,NaN
+B04,FAM,,Unkn,55.2,lyta,NaN,NaN
+B05,FAM,,Unkn,56.2,lyta,NaN,NaN
+B06,FAM,,Unkn,57.2,lyta,NaN,NaN
+B07,FAM,,Unkn,60.2,lyta,31.89237611,2175.080664
+B08,FAM,,Unkn,61.2,lyta,29.12968156,551.3710907
+B09,FAM,,Unkn,64.2,lyta,28.24154219,354.6780773
+B10,FAM,,Unkn,65.2,lyta,NaN,NaN
+B11,FAM,,Unkn,66.2,lyta,NaN,NaN
+B12,FAM,,Unkn,67.2,lyta,NaN,NaN
+C01,FAM,,Unkn,68.2,lyta,NaN,NaN
+C02,FAM,,Unkn,69.2,lyta,NaN,NaN
+C03,FAM,,Unkn,70.2,lyta,NaN,NaN
+C04,FAM,,Unkn,71.2,lyta,NaN,NaN
+C05,FAM,,Unkn,72.2,lyta,27.98955705,312.9466969
+C06,FAM,,Unkn,73.2,lyta,NaN,NaN
+C07,FAM,,Unkn,74.2,lyta,32.38303101,2775.432145
+C08,FAM,,Unkn,75.2,lyta,23.06153883,27.05740061
+C09,FAM,,Unkn,76.2,lyta,31.3541825,1664.80736
+C10,FAM,,Unkn,77.2,lyta,NaN,NaN
+C11,FAM,,Unkn,78.2,lyta,NaN,NaN
+C12,FAM,,Unkn,79.2,lyta,24.71436389,61.4994355
+D01,FAM,,Unkn,80.2,lyta,NaN,NaN
+D02,FAM,,Unkn,81.2,lyta,NaN,NaN
+D03,FAM,,Unkn,82.2,lyta,NaN,NaN
+D04,FAM,,Unkn,83.2,lyta,NaN,NaN
+D05,FAM,,Unkn,84.2,lyta,NaN,NaN
+D06,FAM,,NTC,,lyta,NaN,NaN
+D07,FAM,,NTC,,lyta,NaN,NaN
+D08,FAM,,Std,,lyta,21.87321564,10
+D09,FAM,,Std,,lyta,25.5364444,100
+D10,FAM,,Std,,lyta,29.05869309,1000
+D11,FAM,,Std,,lyta,34.71019591,10000
+D12,FAM,,Std,,lyta,40.46208758,100000

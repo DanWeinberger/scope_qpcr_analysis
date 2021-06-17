@@ -24,45 +24,69 @@ source('heat.fun.R')
 
 ```{r}
  key1 <- read.csv('./Data/hh_id_key.csv')
- a1 <-read_excel("./Data/A143_scope_2021_05_11.xlsx", skip=19)
- a2 <-read_excel("./Data/A144_scope_2021_05_12.xlsx", skip=19)
 
- a3 <-read_excel("./Data/A145_scope_2021_05_12.xlsx", skip=19)
- a4 <-read_excel("./Data/A146_scope_2021_05_17.xlsx", skip=19)
- a5 <-read_excel("./Data/A147_scope_2021_05_17.xlsx", skip=19)
- a6 <-read_excel("./Data/A148_scope_2021_05_19.xlsx", skip=19)
- a7 <-read_excel("./Data/A149_scope_2021_05_19.xlsx", skip=19)
- a8 <-read_excel("./Data/A150_scope_2021_05_24.xlsx", skip=19)
- a9 <-read_excel("./Data/A153_scope_2021_05_29.xlsx", skip=19) 
- a10 <- read_excel("./Data/A154_2021_-06_02.xlsx repeat.xlsx",skip=19)
- a11 <- read_excel("./Data/A155_2021_06_02.xlsx",skip=19)
- a12 <- read_excel("./Data/A156_scope_2021_06_03.xlsx",skip=19)
- a13 <- read_excel("./Data/A151_scope_2021_05_29 repeat lyta.xlsx", skip=19)
- a14 <- read_excel("./Data/A146_scope_2021_06_03 lyta.xlsx", skip=19) 
-a15 <- read_excel("./Data/A157_SCOPE_2021_06_07_AT.xlsx") 
-a16 <- read_excel('./Data/A157_scope_2021_06_08 lyta-piaB repeat.xlsx', skip=19)
-a17 <- read_excel('./Data/A149_scope_2021_06_08_lyta.pltd.xlsx', skip=19)
-a18 <-  read_excel('./Data/A149_scope_2021_06_09_lytarepeat.pltd.xlsx', skip=19)
+# file.test <- list(
+#   "A143_scope_2021_05_11.xlsx",
+#   "A144_scope_2021_05_12_DC.xlsx",
+#   "A145_scope_2021-05-04_DC.xlsx", #LABELING??
+#   "A146_scope_2021_05_17.xlsx",
+#   "A146_scope_2021_06_03 lyta_DC.xlsx",
+#    #"A147-A148_2021_05_24_DC.xlsx",#?? NO SAMPLE LABELS; QUALITY?
+#   "A147_scope_2021_05_17.xlsx",  #??
+#   "A147_scope_2021_05_26_repeatnewlytaprobe_DC.xlsx", #??
+#   "A148_scope_2021_05_19.xlsx",
+#   "A148_scope_2021_05_27_repeatedwithnewlytaprobe_DC.xlsx",
+#   "A149_scope_2021_05_19.xlsx",  #??
+#   "A149_scope_2021_06_09_lytarepeat_DC.pltd.xlsx",  #??
+#   'A149_scope_2021_06_08_lyta.pltd.xlsx',  #??
+#   'A150_scope_2021_05_24_DC.xlsx',
+#   'A151_scope_2021_05_29 repeat lyta_DC.xlsx',
+#   'A153_scope_2021_05_29_DC.xlsx',
+#   'A154_2021_-06_02_DC.xlsx',
+#   'A155_2021_06_02_DC.xlsx',
+#   'A156_scope_2021_06_03_DC.xlsx',
+#  # 'A157_SCOPE_2021_06_07_AT.xlsx',#??
+#   'A157_scope_2021_06_08 lyta-piaB repeat_DC.xlsx' #??
+# )
+
+file_list <- list.files(path="./Data/cleaned")
   
-  
-
-  #XX <-read_excel("./Data/A147-A148_2021_05_24.xlsx", skip=19) #Curves on this look funky
-
-all.res <- list(a1,a2,a3,a4,a5,a6,a7,a8,a9, a10, a11,a12, a13,a14, a15, a16, a17, a18)
+ all.res <-
+   lapply(file_list, function(x){
+     print(x)
+     ds <- read_excel(paste0("./Data/cleaned/",x), skip=19)
+     ds$expt <- substr(x,1,4)
+     ds$Sample <- as.character(ds$Sample)
+     ds$Target <- as.character(ds$Target)
+     ds$Cq <- as.numeric(as.character(ds$Cq))
+     cols.keep <- 
+       c('Cq','Sample','Target','Content','expt','Biological Set Name')
+     ds.names <- names(ds)
+     ds.names <- intersect(ds.names,cols.keep)
+    ds <- ds[,ds.names]
+     return(ds)
+   })
+ 
 
 all.res <- lapply(1:length(all.res), function(x){ all.res[[x]]$plate= x 
 return(all.res[[x]])
 }) 
 
-b1 <- bind_rows(all.res)
+
+test1 <- lapply(all.res, function(x)  is.character(x$Target))
+
+b1 <- bind_rows(all.res) 
+
+b1$Target[is.na(b1$Target)] <- 
+  b1$`Biological Set Name`[is.na(b1$Target)]
 
 b1 <- b1[b1$Content!='Std',]
 
-b1$Target[is.na(b1$Target)] <- b1$`Biological Set Name`[is.na(b1$Target)]
+b1$Target <- gsub(' ' ,'', b1$Target, fixed=T)
 
 b1$Target <- tolower(b1$Target)
 
-b1$Sample[is.na(b1$Sample)] <- b1$`sample id`[is.na(b1$Sample)]
+#b1$Sample[is.na(b1$Sample)] <- b1$`sample id`[is.na(b1$Sample)]
 
 b1 <-b1[!is.na(b1$Sample),]
 
@@ -76,10 +100,7 @@ c1$Cq[is.na(c1$Cq)] <- 45
 
 c1.m <- reshape2::melt(c1, id.vars= c('Sample','Target','plate'))
 
-c1.c <- reshape2::dcast(c1.m, Sample+plate ~ Target, fill=NA)
-plot(c1.c$lyta, c1.c$piab, xlim= c(45,0), ylim=c(45,0), xlab='lytA', ylab='piaB')
-abline(a=0, b=1)
-abline(h=40, v=40, col='gray', lty=2)
+c1.c <- reshape2::dcast(c1.m, Sample+plate +variable ~ Target, fun.aggregate = min)
 
 c1.c$pos <- c1.c$lyta<40 & c1.c$piab<40
 
@@ -87,6 +108,12 @@ write.csv(c1.c, './Data/cleaned_file.csv')
 
 
 
+```
+
+```{r, fig.width=5, fig.height=5}
+plot(c1.c$lyta, c1.c$piab, xlim= c(45,0), ylim=c(45,0), xlab='lytA', ylab='piaB', bty='l')
+abline(a=0, b=1)
+abline(h=40, v=40, col='gray', lty=2)
 ```
 
 

@@ -35,7 +35,7 @@ heat2<-pheatmap(ds1[(cut3+1):nrow(ds1),],
                 legend=T,
                 labels_col = weeks)
 
-tiff(paste("Heat", target,".tiff"), width=4, height=8, unit='in', res=400)
+tiff(paste("Heat", target,".tiff"), width=4, height=8, unit='in', res=200)
 grid.arrange(heat1[[4]],heat2[[4]],ncol=2)
 dev.off()
 
