@@ -22,6 +22,18 @@ source('heat.fun.R')
 
 ```
 
+
+ID 6.1 Saliva was very low under 100 ul.
+
+ID 5.6 qpcr LytA -piaB was ran in plate A155_scope_2021_06_02 .The issue was the label: FIXED 5.5 to 5.6
+
+ID 12.4 qPCR LytA -piaB was ran in plate A150_scope_2021_05_24.The issue was the label --FIXED 12.3 to 12.4
+
+ID 62.2,63.2 samples were picked up 1 month after .We didn’t see any growth after incubation 37 degree over night 
+
+ID 20.5 - 21.5 to verify
+
+
 ```{r}
  key1 <- read.csv('./Data/hh_id_key.csv')
 
