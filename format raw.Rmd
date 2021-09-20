@@ -98,6 +98,10 @@ b1$Target <- gsub(' ' ,'', b1$Target, fixed=T)
 
 b1$Target <- tolower(b1$Target)
 
+b1$Target[b1$Target=='lyta_sso'] <- 'lyta'
+b1$Target[b1$Target=='piab_sso'] <- 'piab'
+
+
 #b1$Sample[is.na(b1$Sample)] <- b1$`sample id`[is.na(b1$Sample)]
 
 b1 <-b1[!is.na(b1$Sample),]
@@ -144,8 +148,11 @@ write.csv(d1, './Data/Result1.csv')
 
 d1.alt <- dcast(c1.m[,c('ID','Target','time','value')],  ID +time~ Target, fun.aggregate = min, na.rm=T)
 
+d1.alt <- d1.alt[!(d1.alt$ID %in% c(38,39)),] #these IDs were not included in study
+
 write.csv(d1.alt, './Data/Result2.csv') #Anne's preferred format
 
+c1.m <- c1.m[!(c1.m$ID %in% c(38,39)),] #these IDs were not included in study
 
 d1.a <- acast(c1.m[,c('ID','Target','time','value','Household')], Target ~ ID +Household ~ time, fun.aggregate=min, na.rm=T, fill=9999)
 
