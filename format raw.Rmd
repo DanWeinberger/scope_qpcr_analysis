@@ -37,30 +37,9 @@ ID 20.5 - 21.5 to verify
 ```{r}
  key1 <- read.csv('./Data/hh_id_key.csv')
 
-# file.test <- list(
-#   "A143_scope_2021_05_11.xlsx",
-#   "A144_scope_2021_05_12_DC.xlsx",
-#   "A145_scope_2021-05-04_DC.xlsx", #LABELING??
-#   "A146_scope_2021_05_17.xlsx",
-#   "A146_scope_2021_06_03 lyta_DC.xlsx",
-#    #"A147-A148_2021_05_24_DC.xlsx",#?? NO SAMPLE LABELS; QUALITY?
-#   "A147_scope_2021_05_17.xlsx",  #??
-#   "A147_scope_2021_05_26_repeatnewlytaprobe_DC.xlsx", #??
-#   "A148_scope_2021_05_19.xlsx",
-#   "A148_scope_2021_05_27_repeatedwithnewlytaprobe_DC.xlsx",
-#   "A149_scope_2021_05_19.xlsx",  #??
-#   "A149_scope_2021_06_09_lytarepeat_DC.pltd.xlsx",  #??
-#   'A149_scope_2021_06_08_lyta.pltd.xlsx',  #??
-#   'A150_scope_2021_05_24_DC.xlsx',
-#   'A151_scope_2021_05_29 repeat lyta_DC.xlsx',
-#   'A153_scope_2021_05_29_DC.xlsx',
-#   'A154_2021_-06_02_DC.xlsx',
-#   'A155_2021_06_02_DC.xlsx',
-#   'A156_scope_2021_06_03_DC.xlsx',
-#  # 'A157_SCOPE_2021_06_07_AT.xlsx',#??
-#   'A157_scope_2021_06_08 lyta-piaB repeat_DC.xlsx' #??
-# )
+key2 <- cbind.data.frame('id'=c(100,101) , 'Household'=c(51,51) )
 
+key1 <- bind_rows(key1,key2)
 file_list <- list.files(path="./Data/cleaned")
   
  all.res <-
@@ -165,3 +144,50 @@ piab.plot <- heat.fun(target='piab')
 lyta.plot <- heat.fun(target='lyta')
 
 ```
+## Summary stats
+```{r}
+c1.m.m <- melt(c1.m[,c('Target','ID','Sample','value','Household') ],
+                     id.vars=c('Target','ID','Sample','Household')) 
+                     
+c1.m.c <- dcast(c1.m.m, ID + Household + Sample  ~Target, fun.aggregate = min, fill=999)
+
+#N people
+length(unique(c1.m.c$ID))
+
+#N households
+length(unique(c1.m.c$Household))
+
+
+#N samples
+length(unique(c1.m.summary$Sample[c1.m$Target=='piab']))
+length(unique(c1.m.summary$Sample[c1.m$Target=='lyta']))
+
+#N positive
+sum(c1.m.c$piab<40 )
+
+#% positive
+sum(c1.m.c$piab<40 )/nrow(c1.m.c)
+
+#N positive lytA
+sum(c1.m.c$lyta<40 )
+
+sum(c1.m.c$lyta<40 )/nrow(c1.m.c)
+
+
+#Count N people with piaB positives by IDs
+c1.m.spl.id <- split(c1.m.c, c1.m.c$ID)
+sum(sapply(c1.m.spl.id, function(x){
+  min(x$piab) <40 
+}
+  ))
+
+#Count N HH with piab positives by IDs
+c1.m.spl.id <- split(c1.m.c, c1.m.c$Household)
+sum(sapply(c1.m.spl.id, function(x){
+  min(x$piab) <40 
+}
+  ))
+
+
+```
+
