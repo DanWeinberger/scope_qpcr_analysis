@@ -37,7 +37,12 @@ ID 20.5 - 21.5 to verify
 ```{r}
  key1 <- read.csv('./Data/hh_id_key.csv')
 
-key2 <- cbind.data.frame('id'=c(100,101) , 'Household'=c(51,51) )
+master1 <- read_excel('./Data/confidential/SCOPE_Master_20210108.xlsx', sheet='COM SAL')
+q1 <- read_excel('./Data/confidential/SCOPE Fortnightly Questionnaire_July 16, 2021_12.45.xlsx')
+key2 <- read_excel('./Data/confidential/SCOPE Participant MRN and ID.xlsx', skip=1)
+
+key3 <- cbind.data.frame('id'=c(100,101) , 'Household'=c(51,51) )
+
 
 key1 <- bind_rows(key1,key2)
 file_list <- list.files(path="./Data/cleaned")
@@ -144,6 +149,7 @@ piab.plot <- heat.fun(target='piab')
 lyta.plot <- heat.fun(target='lyta')
 
 ```
+
 ## Summary stats
 ```{r}
 c1.m.m <- melt(c1.m[,c('Target','ID','Sample','value','Household') ],
@@ -190,4 +196,98 @@ sum(sapply(c1.m.spl.id, function(x){
 
 
 ```
+
+
+## Merge in results with master file
+
+```{r}
+ilogit <- function(x){
+  exp(x)/(1+exp(x))
+}
+master1$merge_id <- as.numeric(as.character(gsub('CS00','',master1$dw_id_full)))
+
+e1 <- merge(c1.c, master1, by.x='Sample', by.y='merge_id', all.x)
+
+e1$pos <- 1*(e1$piab<40)
+
+e1$sample_Date <- as.Date(as.numeric(e1$`sample date`), origin=as.Date('1899-12-30')) #use excel origin of 12-30-1899
+hist(e1$sample_Date, breaks=10)
+e1$part_id <- as.numeric(e1$number)
+
+e2 <- merge(e1, key2, by.x='part_id', by.y="ID Number", all=T)
+e2$`MR#` <- as.numeric(gsub("MR","", e2$`MR#`  ))
+
+q1$MRN <-  gsub("_visit#2.pdf","", q1$MRN )
+q1$MRN <-  as.numeric(gsub("MR","", q1$MRN ))
+
+q1$visitN <- as.numeric(as.character(substring(q1$`Fortnightly visit number:`,2)))
+
+e3 <- merge(e2, q1, by.x=c('MR#','timeline'), by.y=c('MRN','visitN'), all=T)  
+
+e3$`What sorts of activities have you participated in? - Selected Choice`[e3$`Have you taken part in any social activities or outings during the past two weeks?`=='No'] <- 'none'
+```
+
+```{r}
+table(e3$pos, e3$`Have you had any contact with children in the past two weeks?`)
+```
+
+```{r}
+table(e3$pos, e3$`How often do you usually have contact with children?`)
+```
+
+```{r}
+table(e3$pos, e3$`How much contact per day do you have?`)
+```
+
+```{r}
+table(e3$pos, e3$`If yes, what is the age range of the children you have had contact with? - Selected Choice`)
+```
+
+Need to fix this so that those not doing activities also represented
+```{r}
+table(e3$pos, e3$`Have you taken part in any social activities or outings during the past two weeks?`)
+```
+
+```{r}
+table(e3$pos, e3$`What sorts of activities have you participated in? - Selected Choice`)
+```
+
+```{r}
+table(e3$pos, e3$`Have you had any of the following symptoms in the past two weeks? - Q12#1 - Nasal congestion`)
+table(e3$pos, e3$`Have you had any of the following symptoms in the past two weeks? - Q12#1 - Coughing`)
+table(e3$pos, e3$`Have you had any of the following symptoms in the past two weeks? - Q12#1 - Running nose`)
+```
+
+```{r}
+table(e3$pos, e3$`Which symptoms are you experiencing today? - Q13#1 - Coughing`)
+table(e3$pos, e3$`Which symptoms are you experiencing today? - Q13#1 - Running nose`)
+table(e3$pos, e3$`Which symptoms are you experiencing today? - Q13#1 - Sore throat`)
+```
+
+
+```{r}
+mod1 <- mgcv::gam(pos ~s(as.numeric(sample_Date)), family='binomial', data=e1, method='REML')
+
+
+#mod1 <- mgcv::gam(pos ~s(as.numeric(sample_Date)), family='binomial', data=e1 )
+
+
+plot(mod1)
+
+
+pred1 <- predict(mod1)
+plot(ilogit(pred1), ylim=c(0,0.2))
+```
+
+
+
+
+
+
+
+
+
+
+
+
 
