@@ -4,6 +4,12 @@ author: "Dan Weinberger"
 date: "5/25/2021"
 output: html_document
 ---
+## INSTRUCTIONS TO GET SURVEY DATA
+1. Go to Yale qualtrics site 
+2. Navigate to Intake questionaire.
+3. Download data as .xlsx
+4. Repeat for fortnightly survey
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -261,16 +267,28 @@ q0$visitN <- '1'
 #This is fortnightly questionaire
 q1 <- read_excel('./Data/confidential/SCOPE Fortnightly Questionnaire_September 24, 2021_12.00_clean.xlsx', skip=1)
 
-select.colnames.q1 <- c('MRN', "Fortnightly visit number:", "SCOPE ID if known/listed (eg. 0002, 0027, 0044, 0072...)", "Date of Visit", "Visit Location - Selected Choice","Have you taken part in any social activities or outings during the past two weeks?", "What sorts of activities have you participated in? - Selected Choice" , "Have you had any contact with children in the past two weeks?" , "If yes, what is the age range of the children you have had contact with? - Selected Choice","How often do you usually have contact with children?" , "How much contact per day do you have?", "Have you been tested for COVID in the last two weeks?" , "Have you had any sick visits to the doctor or been hospitalized in the last two weeks?" , "Have you received any new vaccines in the last two weeks? - Selected Choice"   ,"Time of sample collection:"  )
+select.colnames.q1 <- c('MRN', "Fortnightly visit number:", "SCOPE ID if known/listed (eg. 0002, 0027, 0044, 0072...)", "Date of Visit", "Visit Location - Selected Choice","Have you taken part in any social activities or outings during the past two weeks?", "What sorts of activities have you participated in? - Selected Choice" , "Have you had any contact with children in the past two weeks?" , "If yes, what is the age range of the children you have had contact with? - Selected Choice","How often do you usually have contact with children?" , "How much contact per day do you have?", "Have you been tested for COVID in the last two weeks?" , "Have you had any sick visits to the doctor or been hospitalized in the last two weeks?" , "Have you received any new vaccines in the last two weeks? - Selected Choice"   ,"Time of sample collection:" ,'Have you taken any antibiotics in the last two weeks?' )
 
 q1 <- q1[,c(which(names(q1) %in% select.colnames.q1),grep('Which symptoms are you experiencing today', names(q1)),grep('Have you had any of the following symptoms', names(q1))  )]
 
-names(q1) <-c('MRN','scope_id', 'visit_date', 'visitN', 'visit_location','recent_social_activities','social_activity_type', 'contact_children','age_child_contacts', 'frequency_child_contacts', 'time_day_child_contacts','recent_covid_test', 'recent_doctor', 'recent_vaccines', 'sample_time', 'current_nasal','current_cough', 'current_runny_nose', 'current_sore_throat','current_fever', 'other_symp1','othr_symp2','recent_nasal', 'recent_cough', 'recent_runny_nose', 'recent_sore_throat', 'recent_fever' , 'recent_other_symp1','recent_other_symp2')
+names(q1) <-c('MRN','scope_id', 'visit_date', 'visitN', 'visit_location','recent_social_activities','social_activity_type', 'contact_children','age_child_contacts', 'frequency_child_contacts', 'time_day_child_contacts','recent_covid_test', 'recent_doctor','recent_abx', 'recent_vaccines', 'sample_time', 'current_nasal','current_cough', 'current_runny_nose', 'current_sore_throat','current_fever', 'other_symp1','othr_symp2','recent_nasal', 'recent_cough', 'recent_runny_nose', 'recent_sore_throat', 'recent_fever' , 'recent_other_symp1','recent_other_symp2')
    
 q1$visit_date_clean <- parse_date_time(q1$visit_date, orders=c('d-b-Y','d/b/Y','d-m-Y','d-m-y','m/d/Y','m/d/y','Y-m-d'))
            
-q1 <- bind_rows(q0, q1)
+#which variables are characteristics of the person (not time varying)
+q0.baseline.vars <- c('MRN','scope_id',"pos_covid_past","pos_covid_date","pneu_vax", "pneu_vax_date",'ethnicity','weight','height','education', "immuno_meds" ,"diabetes_meds", "asthma_meds","flu_shot","hh_relationship", "relationship_duration")
 
+q1 <- bind_rows(q0[,-which(names(q0) %in% q0.baseline.vars)], q1)
+
+
+q1$MRN <-  gsub("_visit#2.pdf","", q1$MRN )
+q1$MRN <-  as.numeric(gsub("MR","", q1$MRN ))
+
+q1$visitN <- gsub('V','', q1$visitN)
+q1$visitN <- gsub('v','', q1$visitN)
+
+q1 <- merge(q1, q0[,q0.baseline.vars], by='MRN', all.x=T)
+sort(table(q1$MRN))
 ```
 
 
@@ -299,13 +317,6 @@ e2 <- merge(e1, key2, by.x='part_id', by.y="ID Number", all=T)
 e2$`MR#` <- as.numeric(gsub("MR","", e2$`MR#`  ))
 
 
-q1$MRN <-  gsub("_visit#2.pdf","", q1$MRN )
-q1$MRN <-  as.numeric(gsub("MR","", q1$MRN ))
-
-q1$visitN <- gsub('V','', q1$visitN)
-q1$visitN <- gsub('v','', q1$visitN)
-
-
 ##NEED TO FIX THIS MERGE--MR and visitN could be missing
 e3 <- merge(e2, q1, by.x=c('MR#','timeline'), by.y=c('MRN','visitN'), all=T)  
 
@@ -316,9 +327,26 @@ e3$frequency_child_contacts[e3$contact_children=='No'] <- 'none'
 e3$piab_pos <- as.factor(1*(e3$piab <40 & !is.na(e3$piab)))
 
 e3$month <- month(e3$sample_Date)
+
+e3$child_contact_u12m <-0
+e3$child_contact_u12m[grep('<12 m', e3$age_child_contacts)] <-1
+
+e3$child_contact_13_23m <-0
+e3$child_contact_13_23m[grep('13-23 mo', e3$age_child_contacts)] <-1
+
+e3$child_contact_24_59m <-0
+e3$child_contact_24_59m[grep('24-59 months', e3$age_child_contacts)] <-1
+
+e3$child_contact_5_10y <-0
+e3$child_contact_5_10y[grep('5-10 years', e3$age_child_contacts)] <-1
+
+e3$child_contact_over10y <-0
+e3$child_contact_over10y[grep('>10 years', e3$age_child_contacts)] <-1
+
+
 ```
 
-How often do you usually have contact with children?
+Do you usually have contact with children?
 ```{r}
 table1(~piab_pos|`contact_children` , data= e3 )
 ```
@@ -330,35 +358,37 @@ table1(~piab_pos|frequency_child_contacts , data= e3 )
 How much contact per day do you have?
 
 ```{r}
-table1(~piab_pos|`How much contact per day do you have?` , data= e3 )
+table1(~piab_pos|`time_day_child_contacts` , data= e3 )
 
 ```
 
 
-**Need to strandardize these categories**
+What ages do you have contact with?
 ```{r}
-table1(~piab_pos|`If yes, what is the age range of the children you have had contact with? - Selected Choice` , data= e3 )
+table1(~piab_pos|child_contact_u12m  , data= e3 )
+table1(~piab_pos|child_contact_13_23m  , data= e3 )
+table1(~piab_pos|child_contact_24_59m  , data= e3 )
+table1(~piab_pos|child_contact_5_10y  , data= e3 )
+table1(~piab_pos|child_contact_over10y   , data= e3 )
 
 ```
 
 Need to fix this so that those not doing activities also represented
 Have you taken part in any social activities or outings during the past two weeks?
 ```{r}
-table1(~piab_pos|`Have you taken part in any social activities or outings during the past two weeks?` , data= e3 )
+table1(~piab_pos|recent_ , data= e3 )
 
 ```
 
 Need to fix this so that those not doing activities also represented
 What sorts of activities have you participated in? - Selected Choice
 ```{r}
-table1(~piab_pos|`What sorts of activities have you participated in? - Selected Choice` , data= e3 )
+table1(~piab_pos|social_activity_type , data= e3 )
 
 ```
-```{r}
-table(e3$`What sorts of activities have you participated in? - Selected Choice`, e3$`Have you had any contact with children in the past two weeks?`)
 
-table(e3$`What sorts of activities have you participated in? - Selected Choice`, e3$`How often do you usually have contact with children?`)
-```
+
+
 
 
 
@@ -369,15 +399,19 @@ table(e3$pos, e3$`Have you had any of the following symptoms in the past two wee
 ```
 Symptoms
 ```{r}
-table1(~piab_pos|`Which symptoms are you experiencing today? - Q13#1 - Coughing` , data= e3 )
-table1(~piab_pos|`Which symptoms are you experiencing today? - Q13#1 - Running nose` , data= e3 )
-table1(~piab_pos|`Which symptoms are you experiencing today? - Q13#1 - Sore throat` , data= e3 )
-table1(~piab_pos|`"Which symptoms are you experiencing today? - Q13#1 - Nasal congestion` , data= e3 )
+table1(~piab_pos|current_cough, data=e3 )
+table1(~piab_pos|current_runny_nose, data= e3 )
+table1(~piab_pos|current_fever, data= e3 )
+table1(~piab_pos|current_sore_throat, data= e3 )
+table1(~piab_pos|current_nasal, data= e3 )
+
+
+#table1(~piab_pos|current_smoke, data= e3 )
 
 ```
 abx
 ```{r}
-table1(~piab_pos|`Have you taken any antibiotics in the last two weeks?` , data= e3 )
+table1(~piab_pos|recent_abx , data= e3 )
 
 ```
 Month 
@@ -388,11 +422,17 @@ table1(~piab_pos|month , data= e3 )
 
 Vaccine receipt (note many missing)
 ```{r}
-table1(~piab_pos|`Have you received any new vaccines in the last two weeks? - Selected Choice` , data= e3 )
+table1(~piab_pos|recent_vaccines, data= e3 )
 ```
 
+Past covid
 ```{r}
-table1(~piab_pos|`Have you received any new vaccines in the last two weeks? - Selected Choice` , data= e3 )
+table1(~piab_pos|pneu_vax, data= e3 )
+```
+
+ethnicity
+```{r}
+table1(~piab_pos|ethnicity, data= e3 )
 ```
 
 
