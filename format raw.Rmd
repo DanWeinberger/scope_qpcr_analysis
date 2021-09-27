@@ -17,6 +17,7 @@ library(RColorBrewer)
 library(cowplot)
 library(gridExtra)
 library(ggplotify)
+library(table1)
 library(patchwork)
 source('heat.fun.R')
 
@@ -38,9 +39,9 @@ ID 20.5 - 21.5 to verify
  key1 <- read.csv('./Data/hh_id_key.csv')
 
 master1 <- read_excel('./Data/confidential/SCOPE_Master_20210108.xlsx', sheet='COM SAL')
-q1 <- read_excel('./Data/confidential/SCOPE Fortnightly Questionnaire_July 16, 2021_12.45.xlsx')
-key2 <- read_excel('./Data/confidential/SCOPE Participant MRN and ID.xlsx', skip=1)
 
+
+key2 <- read_excel('./Data/confidential/SCOPE Participant MRN and ID.xlsx', skip=1)
 key3 <- cbind.data.frame('id'=c(100,101) , 'Household'=c(51,51) )
 
 
@@ -199,85 +200,203 @@ sum(sapply(c1.m.spl.id, function(x){
 
 
 ## Merge in results with master file
+--To do:
+-harmonize column names between fortnightly and initial questionaire so we can merge
+-Fix dates
+-Check missing visitNs
+```{r}
+
+#Intake questionaire
+q0 <-  read_excel('./Data/confidential/SCOPE Intake questionnaire_September 24, 2021_11.57.xlsx', skip=1)
+
+select.colnames <- c('MRN', 
+            "SCOPE ID (eg. 0007, 0044, 0072 etc) if known/listed", 
+            "Date of Visit","Visit Location - Selected Choice",
+            "What is your date of birth? (DD-MM-YYYY)", 
+            "1.     Are you experiencing any of the following symptoms today?   - Q8#1 - Nasal congestion",
+            "1.     Are you experiencing any of the following symptoms today?   - Q8#1 - Coughing",
+            "1.     Are you experiencing any of the following symptoms today?   - Q8#1 - Running nose",
+            "1.     Are you experiencing any of the following symptoms today?   - Q8#1 - Sore throat", 
+            "1.     Are you experiencing any of the following symptoms today?   - Q8#1 - Fever", 
+            "1.    \nHave you had a positive test for COVID?",
+            "If\nyes, when did you have this positive test? (DD-MM-YYYY)",
+            "Have\nyou received the pneumonia vaccine?"  , 
+            "If yes,\nwhen did you receive this vaccine? (DD-MM-YYYY)",
+           "Have\nyou been hospitalized for pneumonia in the last month (30 days)?" , 
+           "Have\nyou taken any antibiotics in the last month (30 days)?",  
+           "Weight",
+           "Height (feet, inches)","
+           Gender - Selected Choice","What is your highest level of education?", 
+           "How would you describe your ethnicity? - Selected Choice"  ,
+           "What is the relationship between yourself and the person you are enrolling into the study with?", 
+           "How long have you been living together? - Years" ,
+           "How much time do you spend together each day? - ___ hours", 
+           "Have you received the flu shot this season?",
+           "Have you had any of the following symptoms in the past 2 weeks? - Q39#1 - Nasal congestion" ,
+          "Have you had any of the following symptoms in the past 2 weeks? - Q39#1 - Coughing",
+         "Have you had any of the following symptoms in the past 2 weeks? - Q39#1 - Running nose",
+         "Have you had any of the following symptoms in the past 2 weeks? - Q39#1 - Sore throat" ,
+         "Have you had any of the following symptoms in the past 2 weeks? - Q39#1 - Fever",
+         "Have you taken any medications for or been told by a health care provider that you have any of th... - Q40#1 - 1.\tImmunodeficiency (Examples include: HIV/AIDS, corticosteroid medication like “Prednisone”, medicine or therapy to treat a cancerous tumor or mass, have had your spleen removed or have chronic kidney disease)",
+         "Have you taken any medications for or been told by a health care provider that you have any of th... - Q40#1 - 2.\tDiabetes",
+         "Have you taken any medications for or been told by a health care provider that you have any of th... - Q40#1 - 5c. Chronic lung disease: Asthma",
+          "Do you currently smoke cigarettes or e-cigarrettes?",
+         "Do you have any regular contact with children?",
+         "What is the age range of the children you have had contact with? - Selected Choice" ,
+         "How often do you usually have contact with children?" ,
+         "How much contact per day do you have?",
+         "Time of sample collection:" 
+         )
+
+q0 <- q0[,c(which(names(q0) %in% select.colnames),grep('Are you experiencing any of the following symptoms today', names(q0)) )]
+
+names(q0) <- c('MRN','scope_id', 'visit_date','visit_location', 'dob','pos_covid_past', 'pos_covid_date', 'pneu_vax', 'pneu_vax_date','pneumonia_hosp', 'recent_abx', 'weight','height','education','ethnicity', 'hh_relationship', 'relationship_duration','hh_contact_time','flu_shot', 'recent_nasal', 'recent_cough', 'recent_runny_nose', 'recent_sore_throat', 'recent_fever','immuno_meds','diabetes_meds','asthma_meds', 'current_smoke', 'contact_children','age_child_contacts', 'frequency_child_contacts', 'time_day_child_contacts', 'time_sample', 'current_nasal','current_cough', 'current_runny_nose', 'current_sore_throat','current_fever', 'other_symp1','othr_symp2')
+
+q0$visit_date[q0$visit_date %in% c( '12/APR/2021','12 Apr 2021','12/14/2021')] <- '2021-04-12'
+
+q0$visit_date_clean <- parse_date_time(q0$visit_date, orders=c('d-b-Y','d/b/Y','d-m-Y','m/d/Y','m/d/y','Y-m-d'))
+q0$visitN <- '1'
+
+
+#This is fortnightly questionaire
+q1 <- read_excel('./Data/confidential/SCOPE Fortnightly Questionnaire_September 24, 2021_12.00_clean.xlsx', skip=1)
+
+select.colnames.q1 <- c('MRN', "Fortnightly visit number:", "SCOPE ID if known/listed (eg. 0002, 0027, 0044, 0072...)", "Date of Visit", "Visit Location - Selected Choice","Have you taken part in any social activities or outings during the past two weeks?", "What sorts of activities have you participated in? - Selected Choice" , "Have you had any contact with children in the past two weeks?" , "If yes, what is the age range of the children you have had contact with? - Selected Choice","How often do you usually have contact with children?" , "How much contact per day do you have?", "Have you been tested for COVID in the last two weeks?" , "Have you had any sick visits to the doctor or been hospitalized in the last two weeks?" , "Have you received any new vaccines in the last two weeks? - Selected Choice"   ,"Time of sample collection:"  )
+
+q1 <- q1[,c(which(names(q1) %in% select.colnames.q1),grep('Which symptoms are you experiencing today', names(q1)),grep('Have you had any of the following symptoms', names(q1))  )]
+
+names(q1) <-c('MRN','scope_id', 'visit_date', 'visitN', 'visit_location','recent_social_activities','social_activity_type', 'contact_children','age_child_contacts', 'frequency_child_contacts', 'time_day_child_contacts','recent_covid_test', 'recent_doctor', 'recent_vaccines', 'sample_time', 'current_nasal','current_cough', 'current_runny_nose', 'current_sore_throat','current_fever', 'other_symp1','othr_symp2','recent_nasal', 'recent_cough', 'recent_runny_nose', 'recent_sore_throat', 'recent_fever' , 'recent_other_symp1','recent_other_symp2')
+   
+q1$visit_date_clean <- parse_date_time(q1$visit_date, orders=c('d-b-Y','d/b/Y','d-m-Y','d-m-y','m/d/Y','m/d/y','Y-m-d'))
+           
+q1 <- bind_rows(q0, q1)
+
+```
+
 
 ```{r}
-ilogit <- function(x){
-  exp(x)/(1+exp(x))
-}
-master1$merge_id <- as.numeric(as.character(gsub('CS00','',master1$dw_id_full)))
+
+
+
+master1$merge_id <- as.numeric(as.character(gsub('CS','',master1$dw_id_full)))
 
 e1 <- merge(c1.c, master1, by.x='Sample', by.y='merge_id', all.x)
+
+excel_date_diff <- as.numeric(as.Date("1970-01-01") - as.Date('1899-12-30')) #origin for excel and R is different
+
+e1$`sample date`[e1$`sample date`=='2/15/25021'] <- as.character(as.numeric(as.Date('2021-02-15')) + excel_date_diff )
+
+
 
 e1$pos <- 1*(e1$piab<40)
 
 e1$sample_Date <- as.Date(as.numeric(e1$`sample date`), origin=as.Date('1899-12-30')) #use excel origin of 12-30-1899
+
 hist(e1$sample_Date, breaks=10)
 e1$part_id <- as.numeric(e1$number)
 
 e2 <- merge(e1, key2, by.x='part_id', by.y="ID Number", all=T)
 e2$`MR#` <- as.numeric(gsub("MR","", e2$`MR#`  ))
 
+
 q1$MRN <-  gsub("_visit#2.pdf","", q1$MRN )
 q1$MRN <-  as.numeric(gsub("MR","", q1$MRN ))
 
-q1$visitN <- as.numeric(as.character(substring(q1$`Fortnightly visit number:`,2)))
+q1$visitN <- gsub('V','', q1$visitN)
+q1$visitN <- gsub('v','', q1$visitN)
 
+
+##NEED TO FIX THIS MERGE--MR and visitN could be missing
 e3 <- merge(e2, q1, by.x=c('MR#','timeline'), by.y=c('MRN','visitN'), all=T)  
 
-e3$`What sorts of activities have you participated in? - Selected Choice`[e3$`Have you taken part in any social activities or outings during the past two weeks?`=='No'] <- 'none'
+e3$social_activity_type[e3$recent_social_activities=='No'] <- 'none'
+
+e3$frequency_child_contacts[e3$contact_children=='No'] <- 'none'
+
+e3$piab_pos <- as.factor(1*(e3$piab <40 & !is.na(e3$piab)))
+
+e3$month <- month(e3$sample_Date)
+```
+
+How often do you usually have contact with children?
+```{r}
+table1(~piab_pos|`contact_children` , data= e3 )
 ```
 
 ```{r}
-table(e3$pos, e3$`Have you had any contact with children in the past two weeks?`)
+table1(~piab_pos|frequency_child_contacts , data= e3 )
+
 ```
+How much contact per day do you have?
 
 ```{r}
-table(e3$pos, e3$`How often do you usually have contact with children?`)
+table1(~piab_pos|`How much contact per day do you have?` , data= e3 )
+
 ```
 
-```{r}
-table(e3$pos, e3$`How much contact per day do you have?`)
-```
 
+**Need to strandardize these categories**
 ```{r}
-table(e3$pos, e3$`If yes, what is the age range of the children you have had contact with? - Selected Choice`)
+table1(~piab_pos|`If yes, what is the age range of the children you have had contact with? - Selected Choice` , data= e3 )
+
 ```
 
 Need to fix this so that those not doing activities also represented
+Have you taken part in any social activities or outings during the past two weeks?
 ```{r}
-table(e3$pos, e3$`Have you taken part in any social activities or outings during the past two weeks?`)
+table1(~piab_pos|`Have you taken part in any social activities or outings during the past two weeks?` , data= e3 )
+
 ```
 
+Need to fix this so that those not doing activities also represented
+What sorts of activities have you participated in? - Selected Choice
 ```{r}
-table(e3$pos, e3$`What sorts of activities have you participated in? - Selected Choice`)
+table1(~piab_pos|`What sorts of activities have you participated in? - Selected Choice` , data= e3 )
+
 ```
+```{r}
+table(e3$`What sorts of activities have you participated in? - Selected Choice`, e3$`Have you had any contact with children in the past two weeks?`)
+
+table(e3$`What sorts of activities have you participated in? - Selected Choice`, e3$`How often do you usually have contact with children?`)
+```
+
+
 
 ```{r}
 table(e3$pos, e3$`Have you had any of the following symptoms in the past two weeks? - Q12#1 - Nasal congestion`)
 table(e3$pos, e3$`Have you had any of the following symptoms in the past two weeks? - Q12#1 - Coughing`)
 table(e3$pos, e3$`Have you had any of the following symptoms in the past two weeks? - Q12#1 - Running nose`)
 ```
+Symptoms
+```{r}
+table1(~piab_pos|`Which symptoms are you experiencing today? - Q13#1 - Coughing` , data= e3 )
+table1(~piab_pos|`Which symptoms are you experiencing today? - Q13#1 - Running nose` , data= e3 )
+table1(~piab_pos|`Which symptoms are you experiencing today? - Q13#1 - Sore throat` , data= e3 )
+table1(~piab_pos|`"Which symptoms are you experiencing today? - Q13#1 - Nasal congestion` , data= e3 )
+
+```
+abx
+```{r}
+table1(~piab_pos|`Have you taken any antibiotics in the last two weeks?` , data= e3 )
+
+```
+Month 
+```{r}
+table1(~piab_pos|month , data= e3 )
+
+```
+
+Vaccine receipt (note many missing)
+```{r}
+table1(~piab_pos|`Have you received any new vaccines in the last two weeks? - Selected Choice` , data= e3 )
+```
 
 ```{r}
-table(e3$pos, e3$`Which symptoms are you experiencing today? - Q13#1 - Coughing`)
-table(e3$pos, e3$`Which symptoms are you experiencing today? - Q13#1 - Running nose`)
-table(e3$pos, e3$`Which symptoms are you experiencing today? - Q13#1 - Sore throat`)
+table1(~piab_pos|`Have you received any new vaccines in the last two weeks? - Selected Choice` , data= e3 )
 ```
 
 
-```{r}
-mod1 <- mgcv::gam(pos ~s(as.numeric(sample_Date)), family='binomial', data=e1, method='REML')
 
-
-#mod1 <- mgcv::gam(pos ~s(as.numeric(sample_Date)), family='binomial', data=e1 )
-
-
-plot(mod1)
-
-
-pred1 <- predict(mod1)
-plot(ilogit(pred1), ylim=c(0,0.2))
-```
 
 
 
