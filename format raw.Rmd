@@ -24,6 +24,7 @@ library(cowplot)
 library(gridExtra)
 library(ggplotify)
 library(table1)
+library(lubridate)
 library(patchwork)
 source('heat.fun.R')
 
@@ -48,10 +49,11 @@ master1 <- read_excel('./Data/confidential/SCOPE_Master_20210108.xlsx', sheet='C
 
 
 key2 <- read_excel('./Data/confidential/SCOPE Participant MRN and ID.xlsx', skip=1)
-key3 <- cbind.data.frame('id'=c(100,101) , 'Household'=c(51,51) )
+key3 <- cbind.data.frame('id'=c(100:101) , 'Household'=c(51,51) )
 
 
-key1 <- bind_rows(key1,key2)
+key1 <- bind_rows(key1,key3)
+
 file_list <- list.files(path="./Data/cleaned")
   
  all.res <-
@@ -107,7 +109,7 @@ c1$Cq[is.na(c1$Cq)] <- 45
 
 c1.m <- reshape2::melt(c1, id.vars= c('Sample','Target','plate'))
 
-c1.c <- reshape2::dcast(c1.m, Sample+plate +variable ~ Target, fun.aggregate = min)
+c1.c <- reshape2::dcast(c1.m, Sample+plate +variable ~ Target, fun.aggregate = min, fill=999)
 
 c1.c$pos <- c1.c$lyta<40 & c1.c$piab<40
 
@@ -131,9 +133,10 @@ c1.m$ID <- as.numeric(as.character(c1.m$ID))
 c1.m$time <- sub('.*\\.', '', c1.m$Sample)
 
 c1.m <- c1.m[order(c1.m$ID, c1.m$time),]
-c1.m <- merge(c1.m, key1, by.x='ID',by.y='id')
 
-d1 <- dcast(c1.m[,c('ID','Target','time','value')],  ID +Target ~ time, fun.aggregate = min, na.rm=T)
+c1.m <- merge(c1.m, key1, by.x='ID',by.y='id', all.x=T)
+
+d1 <- dcast(c1.m[,c('ID','Target','time','value')],  ID +Target ~ time, fun.aggregate = min, na.rm=T, fill=999)
 
 write.csv(d1, './Data/Result1.csv')
 
@@ -264,7 +267,7 @@ q0$visit_date_clean <- parse_date_time(q0$visit_date, orders=c('d-b-Y','d/b/Y','
 q0$visitN <- '1'
 
 
-#This is fortnightly questionaire
+#This is fortnightly questionnaire
 q1 <- read_excel('./Data/confidential/SCOPE Fortnightly Questionnaire_September 24, 2021_12.00_clean.xlsx', skip=1)
 
 select.colnames.q1 <- c('MRN', "Fortnightly visit number:", "SCOPE ID if known/listed (eg. 0002, 0027, 0044, 0072...)", "Date of Visit", "Visit Location - Selected Choice","Have you taken part in any social activities or outings during the past two weeks?", "What sorts of activities have you participated in? - Selected Choice" , "Have you had any contact with children in the past two weeks?" , "If yes, what is the age range of the children you have had contact with? - Selected Choice","How often do you usually have contact with children?" , "How much contact per day do you have?", "Have you been tested for COVID in the last two weeks?" , "Have you had any sick visits to the doctor or been hospitalized in the last two weeks?" , "Have you received any new vaccines in the last two weeks? - Selected Choice"   ,"Time of sample collection:" ,'Have you taken any antibiotics in the last two weeks?' )
@@ -276,19 +279,25 @@ names(q1) <-c('MRN','scope_id', 'visit_date', 'visitN', 'visit_location','recent
 q1$visit_date_clean <- parse_date_time(q1$visit_date, orders=c('d-b-Y','d/b/Y','d-m-Y','d-m-y','m/d/Y','m/d/y','Y-m-d'))
            
 #which variables are characteristics of the person (not time varying)
-q0.baseline.vars <- c('MRN','scope_id',"pos_covid_past","pos_covid_date","pneu_vax", "pneu_vax_date",'ethnicity','weight','height','education', "immuno_meds" ,"diabetes_meds", "asthma_meds","flu_shot","hh_relationship", "relationship_duration")
+q0.baseline.vars <- c('scope_id',"pos_covid_past","pos_covid_date","pneu_vax", "pneu_vax_date",'ethnicity','weight','height','education', "immuno_meds" ,"diabetes_meds", "asthma_meds","flu_shot","hh_relationship", "relationship_duration")
 
 q1 <- bind_rows(q0[,-which(names(q0) %in% q0.baseline.vars)], q1)
 
 
 q1$MRN <-  gsub("_visit#2.pdf","", q1$MRN )
-q1$MRN <-  as.numeric(gsub("MR","", q1$MRN ))
+q1$MRN <-  gsub("MR","", q1$MRN )
+q1$MRN <-  gsub("mr","", q1$MRN )
+q1$MRN <-  as.numeric(q1$MRN)
+
 
 q1$visitN <- gsub('V','', q1$visitN)
 q1$visitN <- gsub('v','', q1$visitN)
 
-q1 <- merge(q1, q0[,q0.baseline.vars], by='MRN', all.x=T)
+q1 <- merge(q1, q0[,c('MRN',q0.baseline.vars)], by='MRN', all=T)
 sort(table(q1$MRN))
+write.csv(q1, './data/confidential/survey_data_to_clean.csv')
+
+
 ```
 
 
