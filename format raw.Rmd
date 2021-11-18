@@ -315,6 +315,12 @@ q2 <- read_excel('./data/confidential/survey_data_to_clean_DMW.xlsx')
 q2$visit_date_cleaned <-    as.Date(as.numeric(q2$visit_date_cleaned), origin = "1900-01-01")
 
 
+##Summary of which people are missing which days
+q2.m <- reshape2::melt(q2[, c('MRN_cleaned','visitN') ], id.vars=c('MRN_cleaned','visitN'))
+q2.c <- reshape2::dcast(q2.m, MRN_cleaned ~visitN, fun.aggregate = length)
+write.csv(q2.c,'./Data/confidential/MRN_surveys_missing.csv')
+
+
 q2 <- q2[,-which(names(q2) %in% q0.baseline.vars)] #baseline vars are messed up in merge
 
 
@@ -350,8 +356,18 @@ q3$age <- round(as.numeric(q3$visit_date_cleaned - as.Date(q3$dob_clean))/365) #
 key2$mr_clean <- gsub('MR', '',key2$`MR#`,)
 
 #This is tricky..on key 2 is minimally cleaned; should match with uncleaned MRN on q3
-q4 <- merge(q3, key2, by.x="MRN", by.y= "mr_clean" , all.x=T)
+q4 <- merge(q3, key2, by.x="MRN_cleaned", by.y= "mr_clean" , all.x=T)
 
+
+q4$flag_id <- is.na(q4$`ID Number`)
+
+
+age1 <- read_excel('./Data/confidential/AGE Scope Participants samples pick-up 06-15-2021.xlsx', skip=1)
+age1$MRN_cleaned <- gsub( 'MR', '',age1$`MR#`)
+age1 <- age1[,c('MRN_cleaned', 'AGE' )]
+
+
+q4 <- merge(q4, age1, by='MRN_cleaned', all.x=T)
 
 #View(q2[is.na(q2$age),])
 
@@ -361,7 +377,7 @@ q4 <- merge(q3, key2, by.x="MRN", by.y= "mr_clean" , all.x=T)
 
 
 ```{r, echo=F}
-hist(q4$age, main='Distribution of ages', xlab='Age(y)')
+hist(q4$AGE, main='Distribution of ages', xlab='Age(y)')
 ```
 
 
@@ -414,18 +430,25 @@ e3$month <- month(e3$visit_date_cleaned)
 
 e3$child_contact_u12m <- 'No'
 e3$child_contact_u12m[grep('<12 m', e3$age_child_contacts)] <- 'Yes'
+e3$child_contact_u12m[is.na(e3$age_child_contacts)] <- 'Not answered'
+
+
 
 e3$child_contact_13_23m <- 'No'
 e3$child_contact_13_23m[grep('13-23 mo', e3$age_child_contacts)] <- 'Yes'
+e3$child_contact_13_23m[is.na(e3$age_child_contacts)] <- 'Not answered'
 
 e3$child_contact_24_59m <- 'No'
 e3$child_contact_24_59m[grep('24-59 months', e3$age_child_contacts)] <- 'Yes'
+e3$child_contact_24_59m[is.na(e3$age_child_contacts)] <- 'Not answered'
 
 e3$child_contact_5_10y <- 'No'
 e3$child_contact_5_10y[grep('5-10 years', e3$age_child_contacts)] <- 'Yes'
+e3$child_contact_5_10y[is.na(e3$age_child_contacts)] <- 'Not answered'
 
 e3$child_contact_over10y <- 'No'
 e3$child_contact_over10y[grep('>10 years', e3$age_child_contacts)] <-'Yes'
+e3$child_contact_over10y[is.na(e3$age_child_contacts)] <- 'Not answered'
 
 
 ```
