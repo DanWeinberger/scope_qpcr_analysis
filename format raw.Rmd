@@ -2,7 +2,9 @@
 title: "format_data"
 author: "Dan Weinberger"
 date: "5/25/2021"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 ## INSTRUCTIONS TO GET SURVEY DATA
 1. Go to Yale qualtrics site 
@@ -12,7 +14,7 @@ output: html_document
 
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 library(readxl)
 library(reshape2)
 library(dplyr)
@@ -42,7 +44,7 @@ ID 62.2,63.2 samples were picked up 1 month after .We didn’t see any growth af
 ID 20.5 - 21.5 to verify
 
 
-```{r}
+```{r, echo=F}
  key1 <- read.csv('./Data/hh_id_key.csv')
 
 master1 <- read_excel('./Data/confidential/SCOPE_Master_20210108.xlsx', sheet='COM SAL')
@@ -126,7 +128,7 @@ abline(h=40, v=40, col='gray', lty=2)
 ```
 
 
-```{r}
+```{r, echo=F}
 
 c1.m$ID <- sub("\\.[0-9]+$", "", c1.m$Sample)
 c1.m$ID <- as.numeric(as.character(c1.m$ID))
@@ -150,12 +152,20 @@ c1.m <- c1.m[!(c1.m$ID %in% c(38,39)),] #these IDs were not included in study
 
 d1.a <- acast(c1.m[,c('ID','Target','time','value','Household')], Target ~ ID +Household ~ time, fun.aggregate=min, na.rm=T, fill=9999)
 
+d1.ds <- reshape2::dcast(c1.m[,c('ID','Target','time','value','Household')],   Household +ID+ time ~ Target, fun.aggregate=min, na.rm=T, fill=9999)
+
 
 ```
 
 ## Heatmaps
+piaB
 ```{r, fig.width=4, fig.height=8}
 piab.plot <- heat.fun(target='piab')
+```
+
+lytA
+```{r, fig.width=4, fig.height=8}
+
 lyta.plot <- heat.fun(target='lyta')
 
 ```
@@ -175,8 +185,9 @@ length(unique(c1.m.c$Household))
 
 
 #N samples
-length(unique(c1.m.summary$Sample[c1.m$Target=='piab']))
-length(unique(c1.m.summary$Sample[c1.m$Target=='lyta']))
+nrow(c1.m.c)
+#length(unique(c1.m.c$Sample[c1.m$Target=='piab']))
+#length(unique(c1.m.c$Sample[c1.m$Target=='lyta']))
 
 #N positive
 sum(c1.m.c$piab<40 )
@@ -213,7 +224,7 @@ sum(sapply(c1.m.spl.id, function(x){
 -harmonize column names between fortnightly and initial questionaire so we can merge
 -Fix dates
 -Check missing visitNs
-```{r}
+```{r, echo=F}
 
 #Intake questionaire
 q0 <-  read_excel('./Data/confidential/SCOPE Intake questionnaire_September 24, 2021_11.57.xlsx', skip=1)
@@ -267,6 +278,7 @@ q0$visit_date_clean <- parse_date_time(q0$visit_date, orders=c('d-b-Y','d/b/Y','
 q0$visitN <- '1'
 
 
+
 #This is fortnightly questionnaire
 q1 <- read_excel('./Data/confidential/SCOPE Fortnightly Questionnaire_September 24, 2021_12.00_clean.xlsx', skip=1)
 
@@ -279,7 +291,7 @@ names(q1) <-c('MRN','scope_id', 'visit_date', 'visitN', 'visit_location','recent
 q1$visit_date_clean <- parse_date_time(q1$visit_date, orders=c('d-b-Y','d/b/Y','d-m-Y','d-m-y','m/d/Y','m/d/y','Y-m-d'))
            
 #which variables are characteristics of the person (not time varying)
-q0.baseline.vars <- c('scope_id',"pos_covid_past","pos_covid_date","pneu_vax", "pneu_vax_date",'ethnicity','weight','height','education', "immuno_meds" ,"diabetes_meds", "asthma_meds","flu_shot","hh_relationship", "relationship_duration")
+q0.baseline.vars <- c('dob','scope_id',"pos_covid_past","pos_covid_date","pneu_vax", "pneu_vax_date",'ethnicity','weight','height','education', "immuno_meds" ,"diabetes_meds", "asthma_meds","flu_shot","hh_relationship", "relationship_duration")
 
 q1 <- bind_rows(q0[,-which(names(q0) %in% q0.baseline.vars)], q1)
 
@@ -293,157 +305,290 @@ q1$MRN <-  as.numeric(q1$MRN)
 q1$visitN <- gsub('V','', q1$visitN)
 q1$visitN <- gsub('v','', q1$visitN)
 
-q1 <- merge(q1, q0[,c('MRN',q0.baseline.vars)], by='MRN', all=T)
-sort(table(q1$MRN))
+#q1 <- merge(q1, q0[,c('MRN',q0.baseline.vars)], by='MRN', all=T)
+
 write.csv(q1, './data/confidential/survey_data_to_clean.csv')
 
 
+q1 <- read.csv('./data/confidential/survey_data_CLEANED.csv', sep=';', skip=1)
+
+q1 <- q1[,-which(names(q1) %in% q0.baseline.vars)] #baseline vars are messed up in merge
+
+
+q0$MRN <-  gsub("_visit#2.pdf","", q0$MRN )
+q0$MRN <-  gsub("MR","", q0$MRN )
+q0$MRN <-  gsub("mr","", q0$MRN )
+q0$MRN <-  as.numeric(q0$MRN)
+
+q1$MRN <-  gsub("MR","", q1$MRN )
+
+merge_key <- unique(q1[, c('MRN',  "MRN..Clean." )])
+
+q0 <- merge(q0, merge_key, by='MRN')
+
+q2 <- merge(q1, q0[,which(names(q0) %in% c('MRN..Clean.',q0.baseline.vars))], by= "MRN..Clean.", all.x=T)
+
+q2 <- q2[q2$visitN %in% c(1,2,3,4,5,6),]
+
+q2$Visit_date..Clean. <- as.Date(q2$Visit_date..Clean., '%m/%d/%Y')
+
+q2$dob_clean <-  parse_date_time(q2$dob, orders=c('%m/%d/%Y', '%m/%d/%y', '%d/%m/%y','%d/%m/%y','%m-%d-%Y','%d-%m-%Y'))
+q2$dob_clean[q2$dob=='1945'] <- as.Date('1945-01-01')
+q2$dob_clean[q2$dob=='/1947'] <- as.Date('1947-01-01')
+
+q2$dob_clean <- as.Date(q2$dob_clean)
+
+q2$dob_clean <- q2$dob_clean - 100*365*(q2$dob_clean>=as.Date('2000-01-01')) #if DOB >year 2000, indicates problem with date
+
+q2$Visit_date..Clean.[q2$Visit_date..Clean.==as.Date('2012-03-30')] <- as.Date('2021-03-30')
+
+q2$age <- round(as.numeric(q2$Visit_date..Clean. - as.Date(q2$dob_clean))/365) #only recorded at t=1
+
+#View(q2[, c('visitN','dob_clean',"MRN..Clean.",'Visit_date..Clean.') ])
+
+key2$mr_clean <- gsub('MR', '',key2$`MR#`,)
+
+q2 <- merge(q2, key2, by.x="MRN..Clean.", by.y= "mr_clean" , all.x=T)
+
+
+#View(q2[is.na(q2$age),])
+
+miss.dob <- q0[q0$dob %in% c('N/A',"19-04-2021") | is.na(q0$dob), c('dob','MRN..Clean.','MRN') ]
+write.csv(miss.dob,'./Data/confidential/check_dob.csv')
 ```
 
 
-```{r}
+```{r, echo=F}
+hist(q2$age, main='Distribution of ages', xlab='Age(y)')
+```
+
+
+```{r, echo=F}
 
 
 
-master1$merge_id <- as.numeric(as.character(gsub('CS','',master1$dw_id_full)))
-
-e1 <- merge(c1.c, master1, by.x='Sample', by.y='merge_id', all.x)
-
-excel_date_diff <- as.numeric(as.Date("1970-01-01") - as.Date('1899-12-30')) #origin for excel and R is different
-
-e1$`sample date`[e1$`sample date`=='2/15/25021'] <- as.character(as.numeric(as.Date('2021-02-15')) + excel_date_diff )
-
-
-
-e1$pos <- 1*(e1$piab<40)
-
-e1$sample_Date <- as.Date(as.numeric(e1$`sample date`), origin=as.Date('1899-12-30')) #use excel origin of 12-30-1899
-
-hist(e1$sample_Date, breaks=10)
-e1$part_id <- as.numeric(e1$number)
-
-e2 <- merge(e1, key2, by.x='part_id', by.y="ID Number", all=T)
-e2$`MR#` <- as.numeric(gsub("MR","", e2$`MR#`  ))
+# master1$merge_id <- as.numeric(as.character(gsub('CS','',master1$dw_id_full)))
+# 
+# e1 <- merge(c1.c, master1, by.x='Sample', by.y='merge_id', all.x)
+# 
+# excel_date_diff <- as.numeric(as.Date("1970-01-01") - as.Date('1899-12-30')) #origin for excel and R is different
+# 
+# e1$`sample date`[e1$`sample date`=='2/15/25021'] <- as.character(as.numeric(as.Date('2021-02-15')) + excel_date_diff )
+# 
+# 
+# 
+# e1$pos <- 1*(e1$piab<40)
+# 
+# e1$sample_Date <- as.Date(as.numeric(e1$`sample date`), origin=as.Date('1899-12-30')) #use excel origin of 12-30-1899
+# 
+# hist(e1$sample_Date, breaks=10)
+# e1$part_id <- as.numeric(e1$number)
+# 
+# e2 <- merge(e1, key2, by.x='part_id', by.y="ID Number", all=T)
+# e2$`MR#` <- as.numeric(gsub("MR","", e2$`MR#`  ))
 
 
 ##NEED TO FIX THIS MERGE--MR and visitN could be missing
-e3 <- merge(e2, q1, by.x=c('MR#','timeline'), by.y=c('MRN','visitN'), all=T)  
+e3 <- merge(d1.ds, q2, by.x=c('ID','time'), by.y=c("ID Number",'visitN'), all=T)  
 
-e3$social_activity_type[e3$recent_social_activities=='No'] <- 'none'
 
-e3$frequency_child_contacts[e3$contact_children=='No'] <- 'none'
+e3$social_activity_type <- as.character(e3$social_activity_type)
+e3$social_activity_type[e3$recent_social_activities=='No'] <- 'No'
+
+e3$frequency_child_contacts <- as.character(e3$frequency_child_contacts)
+e3$frequency_child_contacts[e3$contact_children=='No'] <- 'No'
 
 e3$piab_pos <- as.factor(1*(e3$piab <40 & !is.na(e3$piab)))
 
-e3$month <- month(e3$sample_Date)
 
-e3$child_contact_u12m <-0
-e3$child_contact_u12m[grep('<12 m', e3$age_child_contacts)] <-1
+## export
 
-e3$child_contact_13_23m <-0
-e3$child_contact_13_23m[grep('13-23 mo', e3$age_child_contacts)] <-1
+exp1 <- e3[,c('ID','time', 'age','education','ethnicity',"hh_relationship"  ,        "relationship_duration","pneu_vax" ,"pneu_vax_date" ,"weight", "height","pos_covid_past" ,          "pos_covid_date","current_smoke", "contact_children" ,       
+"age_child_contacts"  ,     "frequency_child_contacts" ,"time_day_child_contacts" )]
 
-e3$child_contact_24_59m <-0
-e3$child_contact_24_59m[grep('24-59 months', e3$age_child_contacts)] <-1
+write.csv(exp1,'./Data/Confidential/export_pfizer.csv')
 
-e3$child_contact_5_10y <-0
-e3$child_contact_5_10y[grep('5-10 years', e3$age_child_contacts)] <-1
+e3$month <- month(e3$Visit_date..Clean.)
 
-e3$child_contact_over10y <-0
-e3$child_contact_over10y[grep('>10 years', e3$age_child_contacts)] <-1
+e3$child_contact_u12m <- 'No'
+e3$child_contact_u12m[grep('<12 m', e3$age_child_contacts)] <- 'Yes'
+
+e3$child_contact_13_23m <- 'No'
+e3$child_contact_13_23m[grep('13-23 mo', e3$age_child_contacts)] <- 'Yes'
+
+e3$child_contact_24_59m <- 'No'
+e3$child_contact_24_59m[grep('24-59 months', e3$age_child_contacts)] <- 'Yes'
+
+e3$child_contact_5_10y <- 'No'
+e3$child_contact_5_10y[grep('5-10 years', e3$age_child_contacts)] <- 'Yes'
+
+e3$child_contact_over10y <- 'No'
+e3$child_contact_over10y[grep('>10 years', e3$age_child_contacts)] <-'Yes'
 
 
 ```
 
 Do you usually have contact with children?
-```{r}
+
+```{r, echo=F}
 table1(~piab_pos|`contact_children` , data= e3 )
 ```
 
-```{r}
+How often do you have contact with children?
+
+```{r, echo=F}
 table1(~piab_pos|frequency_child_contacts , data= e3 )
 
 ```
+
 How much contact per day do you have?
 
-```{r}
+
+```{r, echo=F}
 table1(~piab_pos|`time_day_child_contacts` , data= e3 )
 
 ```
 
 
 What ages do you have contact with?
-```{r}
+
+<12m?
+
+```{r, echo=F}
 table1(~piab_pos|child_contact_u12m  , data= e3 )
+```
+
+12-23m?
+
+```{r, echo=F}
 table1(~piab_pos|child_contact_13_23m  , data= e3 )
+```
+
+2-5y
+
+```{r, echo=F}
 table1(~piab_pos|child_contact_24_59m  , data= e3 )
+```
+
+5-10y
+
+```{r, echo=F}
 table1(~piab_pos|child_contact_5_10y  , data= e3 )
+```
+
+more than 10y
+
+```{r, echo=F}
 table1(~piab_pos|child_contact_over10y   , data= e3 )
-
 ```
 
-Need to fix this so that those not doing activities also represented
 Have you taken part in any social activities or outings during the past two weeks?
-```{r}
-table1(~piab_pos|recent_ , data= e3 )
+
+```{r, echo=F}
+#Need to fix this so that those not doing activities also represented
+
+table1(~piab_pos|recent_social_activities , data= e3 )
 
 ```
 
-Need to fix this so that those not doing activities also represented
 What sorts of activities have you participated in? - Selected Choice
-```{r}
+
+```{r,echo=F}
+#Need to fix this so that those not doing activities also represented
+
 table1(~piab_pos|social_activity_type , data= e3 )
-
 ```
 
 
 
+## Current Symptoms
 
+Cough?
 
-
-```{r}
-table(e3$pos, e3$`Have you had any of the following symptoms in the past two weeks? - Q12#1 - Nasal congestion`)
-table(e3$pos, e3$`Have you had any of the following symptoms in the past two weeks? - Q12#1 - Coughing`)
-table(e3$pos, e3$`Have you had any of the following symptoms in the past two weeks? - Q12#1 - Running nose`)
-```
-Symptoms
-```{r}
+```{r, echo=F}
 table1(~piab_pos|current_cough, data=e3 )
+```
+
+Runny Nose?
+
+```{r, echo=F}
 table1(~piab_pos|current_runny_nose, data= e3 )
+```
+
+Fever?
+
+```{r, echo=F}
 table1(~piab_pos|current_fever, data= e3 )
+```
+
+Sore throat?
+
+```{r, echo=F}
 table1(~piab_pos|current_sore_throat, data= e3 )
+```
+
+Nasal?
+
+```{r, echo=F}
 table1(~piab_pos|current_nasal, data= e3 )
-
-
-#table1(~piab_pos|current_smoke, data= e3 )
-
-```
-abx
-```{r}
-table1(~piab_pos|recent_abx , data= e3 )
-
-```
-Month 
-```{r}
-table1(~piab_pos|month , data= e3 )
-
 ```
 
-Vaccine receipt (note many missing)
-```{r}
-table1(~piab_pos|recent_vaccines, data= e3 )
-```
+## Pneumooccal vaccination
 
-Past covid
-```{r}
+```{r, echo=F}
 table1(~piab_pos|pneu_vax, data= e3 )
 ```
 
-ethnicity
+
+##COVID History
+
+```{r, echo=F}
+table1(~piab_pos|pos_covid_past, data= e3 )
+
+```
+
+## Ethnicity
 ```{r}
 table1(~piab_pos|ethnicity, data= e3 )
 ```
 
+## Education level
+
+```{r, echo=F}
+#table1(~piab_pos|education, data= e3 )
+```
+
+#Medications
+Immune meds
+
+```{r, echo=F}
+table1(~piab_pos|immuno_meds, data= e3 )
+```
+
+Asthma meds
+
+```{r, echo=F}
+table1(~piab_pos|asthma_meds, data= e3 )
+```
+
+Recent Antibiotics
+
+```{r, echo=F}
+table1(~piab_pos|recent_abx , data= e3 )
+
+```
+
+# Seasonality 
+
+```{r, echo=F}
+table1(~piab_pos|month , data= e3 )
+```
+
+## Recent Vaccine receipt (note many missing)
+```{r, echo=F}
+table1(~piab_pos|recent_vaccines, data= e3 )
+
+```
 
 
 
