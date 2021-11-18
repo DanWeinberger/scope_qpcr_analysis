@@ -278,6 +278,8 @@ q0$visit_date_clean <- parse_date_time(q0$visit_date, orders=c('d-b-Y','d/b/Y','
 q0$visitN <- '1'
 
 
+#which variables are characteristics of the person (not time varying)
+q0.baseline.vars <- c('dob','scope_id',"pos_covid_past","pos_covid_date","pneu_vax", "pneu_vax_date",'ethnicity','weight','height','education', "immuno_meds" ,"diabetes_meds", "asthma_meds","flu_shot","hh_relationship", "relationship_duration")
 
 #This is fortnightly questionnaire
 q1 <- read_excel('./Data/confidential/SCOPE Fortnightly Questionnaire_September 24, 2021_12.00_clean.xlsx', skip=1)
@@ -290,8 +292,6 @@ names(q1) <-c('MRN','scope_id', 'visit_date', 'visitN', 'visit_location','recent
    
 q1$visit_date_clean <- parse_date_time(q1$visit_date, orders=c('d-b-Y','d/b/Y','d-m-Y','d-m-y','m/d/Y','m/d/y','Y-m-d'))
            
-#which variables are characteristics of the person (not time varying)
-q0.baseline.vars <- c('dob','scope_id',"pos_covid_past","pos_covid_date","pneu_vax", "pneu_vax_date",'ethnicity','weight','height','education', "immuno_meds" ,"diabetes_meds", "asthma_meds","flu_shot","hh_relationship", "relationship_duration")
 
 q1 <- bind_rows(q0[,-which(names(q0) %in% q0.baseline.vars)], q1)
 
@@ -304,15 +304,18 @@ q1$MRN <-  as.numeric(q1$MRN)
 
 q1$visitN <- gsub('V','', q1$visitN)
 q1$visitN <- gsub('v','', q1$visitN)
+q1$visitN <- as.numeric(q1$visitN)
 
 #q1 <- merge(q1, q0[,c('MRN',q0.baseline.vars)], by='MRN', all=T)
 
+#Output file for manual cleanring, and read back in cleaned version
 write.csv(q1, './data/confidential/survey_data_to_clean.csv')
+q2 <- read_excel('./data/confidential/survey_data_to_clean_DMW.xlsx')
+
+q2$visit_date_cleaned <-    as.Date(as.numeric(q2$visit_date_cleaned), origin = "1900-01-01")
 
 
-q1 <- read.csv('./data/confidential/survey_data_CLEANED.csv', sep=';', skip=1)
-
-q1 <- q1[,-which(names(q1) %in% q0.baseline.vars)] #baseline vars are messed up in merge
+q2 <- q2[,-which(names(q2) %in% q0.baseline.vars)] #baseline vars are messed up in merge
 
 
 q0$MRN <-  gsub("_visit#2.pdf","", q0$MRN )
@@ -320,46 +323,45 @@ q0$MRN <-  gsub("MR","", q0$MRN )
 q0$MRN <-  gsub("mr","", q0$MRN )
 q0$MRN <-  as.numeric(q0$MRN)
 
-q1$MRN <-  gsub("MR","", q1$MRN )
+q2$MRN <-  gsub("MR","", q2$MRN )
 
-merge_key <- unique(q1[, c('MRN',  "MRN..Clean." )])
+merge_key <- unique(q2[, c('MRN',  "MRN_cleaned" )])
 
-q0 <- merge(q0, merge_key, by='MRN')
+q0a <- merge(q0, merge_key, by='MRN', all=T)
 
-q2 <- merge(q1, q0[,which(names(q0) %in% c('MRN..Clean.',q0.baseline.vars))], by= "MRN..Clean.", all.x=T)
+q3 <- merge(q2, q0a[,which(names(q0a) %in% c('MRN_cleaned',q0.baseline.vars))], by= "MRN_cleaned", all.x=T)
 
-q2 <- q2[q2$visitN %in% c(1,2,3,4,5,6),]
+q3 <- q3[q3$visitN %in% c(1,2,3,4,5,6),]
 
-q2$Visit_date..Clean. <- as.Date(q2$Visit_date..Clean., '%m/%d/%Y')
+q3$visit_date_cleaned <- as.Date(q3$visit_date_cleaned, '%m/%d/%Y')
 
-q2$dob_clean <-  parse_date_time(q2$dob, orders=c('%m/%d/%Y', '%m/%d/%y', '%d/%m/%y','%d/%m/%y','%m-%d-%Y','%d-%m-%Y'))
-q2$dob_clean[q2$dob=='1945'] <- as.Date('1945-01-01')
-q2$dob_clean[q2$dob=='/1947'] <- as.Date('1947-01-01')
+q3$dob_clean <-  parse_date_time(q3$dob, orders=c('%m/%d/%Y', '%m/%d/%y', '%d/%m/%y','%d/%m/%y','%m-%d-%Y','%d-%m-%Y'))
+q3$dob_clean[q3$dob=='1945'] <- as.Date('1945-01-01')
+q3$dob_clean[q3$dob=='/1947'] <- as.Date('1947-01-01')
 
-q2$dob_clean <- as.Date(q2$dob_clean)
+q3$dob_clean <- as.Date(q3$dob_clean)
 
-q2$dob_clean <- q2$dob_clean - 100*365*(q2$dob_clean>=as.Date('2000-01-01')) #if DOB >year 2000, indicates problem with date
+q3$dob_clean <- q3$dob_clean - 100*365*(q3$dob_clean>=as.Date('2000-01-01')) #if DOB >year 2000, indicates problem with date
 
-q2$Visit_date..Clean.[q2$Visit_date..Clean.==as.Date('2012-03-30')] <- as.Date('2021-03-30')
-
-q2$age <- round(as.numeric(q2$Visit_date..Clean. - as.Date(q2$dob_clean))/365) #only recorded at t=1
+q3$age <- round(as.numeric(q3$visit_date_cleaned - as.Date(q3$dob_clean))/365) #only recorded at t=1
 
 #View(q2[, c('visitN','dob_clean',"MRN..Clean.",'Visit_date..Clean.') ])
 
 key2$mr_clean <- gsub('MR', '',key2$`MR#`,)
 
-q2 <- merge(q2, key2, by.x="MRN..Clean.", by.y= "mr_clean" , all.x=T)
+#This is tricky..on key 2 is minimally cleaned; should match with uncleaned MRN on q3
+q4 <- merge(q3, key2, by.x="MRN", by.y= "mr_clean" , all.x=T)
 
 
 #View(q2[is.na(q2$age),])
 
-miss.dob <- q0[q0$dob %in% c('N/A',"19-04-2021") | is.na(q0$dob), c('dob','MRN..Clean.','MRN') ]
-write.csv(miss.dob,'./Data/confidential/check_dob.csv')
+#miss.dob <- q0a[q0a$dob %in% c('N/A',"19-04-2021") | is.na(q0$dob), c('dob','MRN_cleaned','MRN') ]
+#write.csv(miss.dob,'./Data/confidential/check_dob.csv')
 ```
 
 
 ```{r, echo=F}
-hist(q2$age, main='Distribution of ages', xlab='Age(y)')
+hist(q4$age, main='Distribution of ages', xlab='Age(y)')
 ```
 
 
@@ -389,7 +391,7 @@ hist(q2$age, main='Distribution of ages', xlab='Age(y)')
 
 
 ##NEED TO FIX THIS MERGE--MR and visitN could be missing
-e3 <- merge(d1.ds, q2, by.x=c('ID','time'), by.y=c("ID Number",'visitN'), all=T)  
+e3 <- merge(d1.ds, q4, by.x=c('ID','time'), by.y=c("ID Number",'visitN'), all=T)  
 
 
 e3$social_activity_type <- as.character(e3$social_activity_type)
@@ -408,7 +410,7 @@ exp1 <- e3[,c('ID','time', 'age','education','ethnicity',"hh_relationship"  ,   
 
 write.csv(exp1,'./Data/Confidential/export_pfizer.csv')
 
-e3$month <- month(e3$Visit_date..Clean.)
+e3$month <- month(e3$visit_date_cleaned)
 
 e3$child_contact_u12m <- 'No'
 e3$child_contact_u12m[grep('<12 m', e3$age_child_contacts)] <- 'Yes'
