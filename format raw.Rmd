@@ -29,6 +29,7 @@ library(table1)
 library(lubridate)
 library(patchwork)
 source('heat.fun.R')
+source('heat.fun.contact.R')
 
 ```
 
@@ -169,6 +170,8 @@ lytA
 lyta.plot <- heat.fun(target='lyta')
 
 ```
+
+Contacts
 
 ## Summary stats
 ```{r}
@@ -374,6 +377,30 @@ q4 <- merge(q4, age1, by='MRN_cleaned', all.x=T)
 #miss.dob <- q0a[q0a$dob %in% c('N/A',"19-04-2021") | is.na(q0$dob), c('dob','MRN_cleaned','MRN') ]
 #write.csv(miss.dob,'./Data/confidential/check_dob.csv')
 ```
+heat map of contacts
+```{r, fig.width=4, fig.height=8}
+##Summary of which people are missing which days
+q4.1 <- q4
+
+q4.1$child_contact_2_10y <- 0
+q4.1$child_contact_2_10y[grep('24-59 months', q4.1$age_child_contacts)] <- 1
+q4.1$child_contact_2_10y[grep('5-10 years', q4.1$age_child_contacts)] <- 1
+q4.1$child_contact_2_10y[is.na(q4.1$age_child_contacts)] <- NA
+
+q4.m <- reshape2::melt(q4.1[, c('ID Number','visitN','child_contact_2_10y') ], id.vars=c('ID Number','visitN'))
+
+q2.c <- reshape2::dcast(q4.m, `ID Number` ~visitN, fun.aggregate = mean, fill=9999)
+names(q2.c)[1] <- 'ID'
+
+q2.c <- q2.c[!(q2.c$ID %in% c(38,39)),] #these IDs were not included in study
+
+q3.c <- merge(q2.c, key1, by.x='ID',by.y='id')
+
+heat.fun.contact()
+
+
+```
+
 
 
 ```{r, echo=F}
