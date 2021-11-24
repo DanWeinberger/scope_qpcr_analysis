@@ -378,7 +378,9 @@ q4 <- merge(q4, age1, by='MRN_cleaned', all.x=T)
 #miss.dob <- q0a[q0a$dob %in% c('N/A',"19-04-2021") | is.na(q0$dob), c('dob','MRN_cleaned','MRN') ]
 #write.csv(miss.dob,'./Data/confidential/check_dob.csv')
 ```
+
 heat map of contacts
+
 ```{r, fig.width=4, fig.height=8}
 ##Summary of which people are missing which days
 q4.1 <- q4
@@ -386,6 +388,9 @@ q4.1 <- q4
 q4.1$child_contact_2_10y <- 0
 q4.1$child_contact_2_10y[grep('24-59 months', q4.1$age_child_contacts)] <- 1
 q4.1$child_contact_2_10y[grep('5-10 years', q4.1$age_child_contacts)] <- 1
+#q4.1$child_contact_2_10y[grep('13-23 months', q4.1$age_child_contacts)] <- 1
+#q4.1$child_contact_2_10y[grep('<12 months', q4.1$age_child_contacts)] <- 1
+
 q4.1$child_contact_2_10y[is.na(q4.1$age_child_contacts)] <- NA
 
 q4.m <- reshape2::melt(q4.1[, c('ID Number','visitN','child_contact_2_10y') ], id.vars=c('ID Number','visitN'))
