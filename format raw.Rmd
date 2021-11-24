@@ -80,10 +80,11 @@ all.res <- lapply(1:length(all.res), function(x){ all.res[[x]]$plate= x
 return(all.res[[x]])
 }) 
 
-
 test1 <- lapply(all.res, function(x)  is.character(x$Target))
 
 b1 <- bind_rows(all.res) 
+
+b1$Cq[is.na(b1$Cq)] <- 45
 
 b1$Target[is.na(b1$Target)] <- 
   b1$`Biological Set Name`[is.na(b1$Target)]
@@ -94,8 +95,8 @@ b1$Target <- gsub(' ' ,'', b1$Target, fixed=T)
 
 b1$Target <- tolower(b1$Target)
 
-b1$Target[b1$Target=='lyta_sso'] <- 'lyta'
-b1$Target[b1$Target=='piab_sso'] <- 'piab'
+b1$Target[grep('lyta',b1$Target)] <- 'lyta'
+b1$Target[grep('piab',b1$Target)] <- 'piab'
 
 
 #b1$Sample[is.na(b1$Sample)] <- b1$`sample id`[is.na(b1$Sample)]
@@ -112,7 +113,7 @@ c1$Cq[is.na(c1$Cq)] <- 45
 
 c1.m <- reshape2::melt(c1, id.vars= c('Sample','Target','plate'))
 
-c1.c <- reshape2::dcast(c1.m, Sample+plate +variable ~ Target, fun.aggregate = min, fill=999)
+c1.c <- reshape2::dcast(c1.m, Sample+plate +variable ~ Target, fun.aggregate = min, fill=9999)
 
 c1.c$pos <- c1.c$lyta<40 & c1.c$piab<40
 
@@ -139,13 +140,13 @@ c1.m <- c1.m[order(c1.m$ID, c1.m$time),]
 
 c1.m <- merge(c1.m, key1, by.x='ID',by.y='id', all.x=T)
 
-d1 <- dcast(c1.m[,c('ID','Target','time','value')],  ID +Target ~ time, fun.aggregate = min, na.rm=T, fill=999)
+d1 <- dcast(c1.m[,c('ID','Target','time','value')],  ID +Target ~ time, fun.aggregate = min, na.rm=T, fill=9999)
 
 write.csv(d1, './Data/Result1.csv')
 
-d1.alt <- dcast(c1.m[,c('ID','Target','time','value')],  ID +time~ Target, fun.aggregate = min, na.rm=T)
+d1.alt <- dcast(c1.m[,c('ID','Target','time','value')],  ID +time~ Target, fun.aggregate = min, na.rm=T, fill=9999)
 
-d1.alt <- d1.alt[!(d1.alt$ID %in% c(38,39)),] #these IDs were not included in study
+d1.alt <- d1.alt[!(d1.alt$ID %in% c(38,39, 48, 49)),] #these IDs were not included in study
 
 write.csv(d1.alt, './Data/Result2.csv') #Anne's preferred format
 
