@@ -449,8 +449,10 @@ e3$social_activity_type[e3$recent_social_activities=='No'] <- 'No'
 e3$frequency_child_contacts <- as.character(e3$frequency_child_contacts)
 e3$frequency_child_contacts[e3$contact_children=='No'] <- 'No'
 
-e3$piab_pos <- as.factor(1*(e3$piab <40 & !is.na(e3$piab)))
-
+e3$piab_pos <- NA
+e3$piab_pos[e3$piab >=40 & !is.na(e3$piab)] <- 0 
+e3$piab_pos[e3$piab <40 & !is.na(e3$piab)] <- 1 
+e3$piab_pos <- as.factor(e3$piab_pos)
 
 ## export
 
@@ -465,7 +467,11 @@ e3$child_contact_u12m <- 'No'
 e3$child_contact_u12m[grep('<12 m', e3$age_child_contacts)] <- 'Yes'
 e3$child_contact_u12m[is.na(e3$age_child_contacts)] <- 'Not answered'
 
-
+e3$child_contact_u5y <- 'No'
+e3$child_contact_u5y[grep('<12 m', e3$age_child_contacts)] <- 'Yes'
+e3$child_contact_u5y[grep('13-23 mo', e3$age_child_contacts)] <- 'Yes'
+e3$child_contact_u5y[grep('24-59 months', e3$age_child_contacts)] <- 'Yes'
+e3$child_contact_u5y[is.na(e3$age_child_contacts)] <- 'Not answered'
 
 e3$child_contact_13_23m <- 'No'
 e3$child_contact_13_23m[grep('13-23 mo', e3$age_child_contacts)] <- 'Yes'
@@ -490,6 +496,10 @@ Do you usually have contact with children?
 
 ```{r, echo=F}
 table1(~piab_pos|`contact_children` , data= e3 )
+```
+Contact <5 y olds
+```{r, echo=F}
+table1(~piab_pos|`child_contact_u5y` , data= e3 )
 ```
 
 How often do you have contact with children?
@@ -647,6 +657,14 @@ table1(~piab_pos|month , data= e3 )
 table1(~piab_pos|recent_vaccines, data= e3 )
 
 ```
+
+
+Simple model
+```{r}
+mod1 <- glm(piab_pos ~ child_contact_u12m+ child_contact_13_23m + child_contact_24_59m + child_contact_5_10y + child_contact_over10y, data=e3[e3$child_contact_13_23m!='Not answered',], family=binomial(link='log'))
+summary(mod1)
+```
+
 
 
 
