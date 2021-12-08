@@ -352,7 +352,14 @@ names(q1b) <- rename.q1
 q1b$MRN <- as.numeric(q1b$MRN)
 q1b$visitN <- as.numeric(q1b$visitN)
 
-q1b <- unique(q1b) #de-deuplicate
+#q1b <- unique(q1b) #de-deuplicate
+
+q1b <- q1b %>%
+  group_by(MRN, visitN) %>%
+  mutate(repN=n()) %>%
+  ungroup()
+
+q1b <- q1b[q1b$repN==1,]
 ```
 
 
