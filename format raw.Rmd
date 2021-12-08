@@ -233,10 +233,17 @@ sum(sapply(c1.m.spl.id, function(x){
 #Intake questionaire
 q0 <-  read_excel('./Data/confidential/SCOPE Intake questionnaire_September 24, 2021_11.57.xlsx', skip=1)
 
+q0b <- read_excel('./Data/confidential/SCOPE Intake questionnaire_December 7, 2021_13.05.xlsx', skip=1)
+
+names(q0b) <- names(q0)
+#str(q0b[,select.colnames])
+
+q0_combine <- bind_rows(q0, q0b)
+
 select.colnames <- c('MRN', 
             "SCOPE ID (eg. 0007, 0044, 0072 etc) if known/listed", 
-            "Date of Visit","Visit Location - Selected Choice",
-            "What is your date of birth? (DD-MM-YYYY)", 
+            "Date of Visit", "Date of Visit MM/DD/YYYY" , "Visit Location - Selected Choice",
+            "What is your date of birth? (DD-MM-YYYY)", "What is your date of birth? (MM/DD/YYYY)",
             "1.     Are you experiencing any of the following symptoms today?   - Q8#1 - Nasal congestion",
             "1.     Are you experiencing any of the following symptoms today?   - Q8#1 - Coughing",
             "1.     Are you experiencing any of the following symptoms today?   - Q8#1 - Running nose",
@@ -272,31 +279,32 @@ select.colnames <- c('MRN',
          "Time of sample collection:" 
          )
 
-q0 <- q0[,c(which(names(q0) %in% select.colnames),grep('Are you experiencing any of the following symptoms today', names(q0)) )]
+q0_combine <- q0_combine[,c(which(names(q0_combine) %in% select.colnames),grep('Are you experiencing any of the following symptoms today', names(q0_combine)) )]
 
-names(q0) <- c('MRN','scope_id', 'visit_date','visit_location', 'dob','pos_covid_past', 'pos_covid_date', 'pneu_vax', 'pneu_vax_date','pneumonia_hosp', 'recent_abx', 'weight','height','education','ethnicity', 'hh_relationship', 'relationship_duration','hh_contact_time','flu_shot', 'recent_nasal', 'recent_cough', 'recent_runny_nose', 'recent_sore_throat', 'recent_fever','immuno_meds','diabetes_meds','asthma_meds', 'current_smoke', 'contact_children','age_child_contacts', 'frequency_child_contacts', 'time_day_child_contacts', 'time_sample', 'current_nasal','current_cough', 'current_runny_nose', 'current_sore_throat','current_fever', 'other_symp1','othr_symp2')
+names(q0_combine) <- c('MRN','scope_id', 'visit_date','visit_location', 'dob','pos_covid_past', 'pos_covid_date', 'pneu_vax', 'pneu_vax_date','pneumonia_hosp', 'recent_abx', 'weight','height','education','ethnicity', 'hh_relationship', 'relationship_duration','hh_contact_time','flu_shot', 'recent_nasal', 'recent_cough', 'recent_runny_nose', 'recent_sore_throat', 'recent_fever','immuno_meds','diabetes_meds','asthma_meds', 'current_smoke', 'contact_children','age_child_contacts', 'frequency_child_contacts', 'time_day_child_contacts', 'time_sample', 'current_nasal','current_cough', 'current_runny_nose', 'current_sore_throat','current_fever', 'other_symp1','othr_symp2')
 
-q0$visit_date[q0$visit_date %in% c( '12/APR/2021','12 Apr 2021','12/14/2021')] <- '2021-04-12'
+q0_combine$visit_date[q0_combine$visit_date %in% c( '12/APR/2021','12 Apr 2021','12/14/2021')] <- '2021-04-12'
 
-q0$visit_date_clean <- parse_date_time(q0$visit_date, orders=c('d-b-Y','d/b/Y','d-m-Y','m/d/Y','m/d/y','Y-m-d'))
-q0$visitN <- '1'
+q0_combine$visit_date_clean <- parse_date_time(q0_combine$visit_date, orders=c('d-b-Y','d/b/Y','d-m-Y','m/d/Y','m/d/y','Y-m-d'))
+q0_combine$visitN <- '1'
 
 
 #which variables are characteristics of the person (not time varying)
 q0.baseline.vars <- c('dob','scope_id',"pos_covid_past","pos_covid_date","pneu_vax", "pneu_vax_date",'ethnicity','weight','height','education', "immuno_meds" ,"diabetes_meds", "asthma_meds","flu_shot","hh_relationship", "relationship_duration")
 
 #This is fortnightly questionnaire
-q1 <- read_excel('./Data/confidential/SCOPE Fortnightly Questionnaire_September 24, 2021_12.00_clean.xlsx', skip=1)
+q1a <- read_excel('./Data/confidential/survey_data_to_clean_DMW.xlsx')
+q1a$visit_date_cleaned <- as.Date(as.numeric(q1a$visit_date_cleaned), origin='1899-12-30')
 
-select.colnames.q1 <- c('MRN', "Fortnightly visit number:", "SCOPE ID if known/listed (eg. 0002, 0027, 0044, 0072...)", "Date of Visit", "Visit Location - Selected Choice","Have you taken part in any social activities or outings during the past two weeks?", "What sorts of activities have you participated in? - Selected Choice" , "Have you had any contact with children in the past two weeks?" , "If yes, what is the age range of the children you have had contact with? - Selected Choice","How often do you usually have contact with children?" , "How much contact per day do you have?", "Have you been tested for COVID in the last two weeks?" , "Have you had any sick visits to the doctor or been hospitalized in the last two weeks?" , "Have you received any new vaccines in the last two weeks? - Selected Choice"   ,"Time of sample collection:" ,'Have you taken any antibiotics in the last two weeks?' )
+q1b <- read_excel('./Data/confidential/SCOPE Fortnightly Questionnaire_December 7, 2021_13.03.xlsx', skip=1)
+q1b$MRN_cleaned <- as.numeric(q1b$MRN_cleaned)
+q1 <- bind_rows(q1a, q1b)
+
 
 q1 <- q1[,c(which(names(q1) %in% select.colnames.q1),grep('Which symptoms are you experiencing today', names(q1)),grep('Have you had any of the following symptoms', names(q1))  )]
 
 names(q1) <-c('MRN','scope_id', 'visit_date', 'visitN', 'visit_location','recent_social_activities','social_activity_type', 'contact_children','age_child_contacts', 'frequency_child_contacts', 'time_day_child_contacts','recent_covid_test', 'recent_doctor','recent_abx', 'recent_vaccines', 'sample_time', 'current_nasal','current_cough', 'current_runny_nose', 'current_sore_throat','current_fever', 'other_symp1','othr_symp2','recent_nasal', 'recent_cough', 'recent_runny_nose', 'recent_sore_throat', 'recent_fever' , 'recent_other_symp1','recent_other_symp2')
    
-q1$visit_date_clean <- parse_date_time(q1$visit_date, orders=c('d-b-Y','d/b/Y','d-m-Y','d-m-y','m/d/Y','m/d/y','Y-m-d'))
-           
-
 q1 <- bind_rows(q0[,-which(names(q0) %in% q0.baseline.vars)], q1)
 
 
@@ -337,7 +345,7 @@ q2$MRN <-  gsub("MR","", q2$MRN )
 
 merge_key <- unique(q2[, c('MRN',  "MRN_cleaned" )])
 
-q0a <- merge(q0, merge_key, by='MRN', all=T)
+q0a <- merge(q0_combine, merge_key, by='MRN', all=T)
 
 q3 <- merge(q2, q0a[,which(names(q0a) %in% c('MRN_cleaned',q0.baseline.vars))], by= "MRN_cleaned", all.x=T)
 
