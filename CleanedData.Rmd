@@ -7,6 +7,10 @@ output:
   html_document: default
 ---
 
+## Final Data
+
+This code uses a final adjudicated version of the data, prepared by Sidiya and Ashley. Raw data files are available under Data/cleaned
+
 ## INSTRUCTIONS TO GET SURVEY DATA
 
 1.  Go to Yale qualtrics site
@@ -56,103 +60,100 @@ key3 <- cbind.data.frame('id'=c(100:101) , 'Household'=c(51,51) )
 
 key1 <- bind_rows(key1,key3)
 
-file_list <- list.files(path="./Data/cleaned")
+```
+
+What to do if we have borderline positive then negative test:
+
+1) If weak positive for piaB (e.g., 35 Ct or higher) AND at least one of the repeats is \<40, then it is positive
+
+2) If weak positive for piaB (e.g., 35 Ct or higher), AND (2 repeats negative) then NEGATIVE
+
+3) if weak positive for piaB and then negative on 1 repeat performed and negative, then negative
+
+4) If posivi, take ave of Ct among those \<40
+
+```{r}
+master1$piaB[is.na(master1$piaB & master1$piaB_DW==45)] <- 45
+master1$lytA[is.na(master1$lytA & master1$lytA_DW==45)] <- 45
+
+d1 <- master1[, c('timeline','Household #','dw_id_full', "piaB" , "piaB repeated 1","piaB repeated 2","lytA","lyta Repeated 1", "lyta Repeated 2" )]
+
+
+fun1 <- function(ds=d1,varnames=c("piaB" , "piaB repeated 1","piaB repeated 2"), probe){
+  mat1<- apply(ds[varnames],1,function(x){
+    x[x>=40 & !is.na(x)] <- 45
+    N.pos <- sum((x<40 & !is.na(x) ))  #how many negative are there?
+    N.neg <- sum((x>=40 & !is.na(x) ))  #how many negative are there?
+    positive = 1*(N.pos > N.neg & N.pos > 0)
+    
+    if(positive==1){
+    ct <- mean(x[x<40], na.rm=T)
+    }else{
+      ct=45
+    }
+    if(sum(is.na(x))==3){
+      positive=NA
+      ct=9999
+    }
+    return(c('positive'=positive,'ct'=ct))
+  })
+  ds2 <- as.data.frame(t(mat1))
+  names(ds2) <- paste0(probe,'_', names(ds2))
+  return(ds2)
+  }
   
- all.res <-
-   lapply(file_list, function(x){
-     print(x)
-     ds <- read_excel(paste0("./Data/cleaned/",x), skip=19)
-     ds$expt <- substr(x,1,4)
-     ds$Sample <- as.character(ds$Sample)
-     ds$Target <- as.character(ds$Target)
-     ds$Cq <- as.numeric(as.character(ds$Cq))
-     cols.keep <- 
-       c('Cq','Sample','Target','Content','expt','Biological Set Name')
-     ds.names <- names(ds)
-     ds.names <- intersect(ds.names,cols.keep)
-    ds <- ds[,ds.names]
-     return(ds)
-   })
- 
+piab_check <- fun1(ds=d1,varnames=c("piaB" , "piaB repeated 1","piaB repeated 2"), probe='piab')
 
-all.res <- lapply(1:length(all.res), function(x){ all.res[[x]]$plate= x 
-return(all.res[[x]])
-}) 
+lyta_check <- fun1(ds=d1,varnames=c("lytA" , "lyta Repeated 1","lyta Repeated 2"), probe='lyta')
 
-test1 <- lapply(all.res, function(x)  is.character(x$Target))
+d2 <- cbind.data.frame(d1,piab_check,lyta_check )
 
-b1 <- bind_rows(all.res) 
-
-b1$Cq[is.na(b1$Cq)] <- 45
-
-b1$Target[is.na(b1$Target)] <- 
-  b1$`Biological Set Name`[is.na(b1$Target)]
-
-b1 <- b1[b1$Content!='Std',]
-
-b1$Target <- gsub(' ' ,'', b1$Target, fixed=T)
-
-b1$Target <- tolower(b1$Target)
-
-b1$Target[grep('lyta',b1$Target)] <- 'lyta'
-b1$Target[grep('piab',b1$Target)] <- 'piab'
-
-
-#b1$Sample[is.na(b1$Sample)] <- b1$`sample id`[is.na(b1$Sample)]
-
-b1 <-b1[!is.na(b1$Sample),]
-
-b1$Sample <- round(as.numeric(b1$Sample),1)
-
-b1 <- b1[b1$Sample>0 & !is.na(b1$Sample),]
-
-c1 <- b1[, c('Sample','Cq','Target','plate')]
-
-c1$Cq[is.na(c1$Cq)] <- 45
-
-c1.m <- reshape2::melt(c1, id.vars= c('Sample','Target','plate'))
-
-c1.c <- reshape2::dcast(c1.m, Sample+plate +variable ~ Target, fun.aggregate = min, fill=9999)
-
-c1.c$pos <- c1.c$lyta<40 & c1.c$piab<40
-
-write.csv(c1.c, './Data/cleaned_file.csv')
 
 
 
 ```
 
 ```{r, fig.width=5, fig.height=5}
-plot(c1.c$lyta, c1.c$piab, xlim= c(45,0), ylim=c(45,0), xlab='lytA', ylab='piaB', bty='l')
+plot(d2$lyta_ct, d2$piab_ct, xlim= c(45,0), ylim=c(45,0), xlab='lytA', ylab='piaB', bty='l')
 abline(a=0, b=1)
 abline(h=40, v=40, col='gray', lty=2)
 ```
 
 ```{r, echo=F}
 
-c1.m$ID <- sub("\\.[0-9]+$", "", c1.m$Sample)
-c1.m$ID <- as.numeric(as.character(c1.m$ID))
-c1.m$time <- sub('.*\\.', '', c1.m$Sample)
+d2$ID <- sub("\\.[0-9]+$", "", d2$dw_id_full)
+d2$ID <- as.numeric(sub("CS", "", d2$ID))
 
-c1.m <- c1.m[order(c1.m$ID, c1.m$time),]
 
-c1.m <- merge(c1.m, key1, by.x='ID',by.y='id', all.x=T)
 
-d1 <- dcast(c1.m[,c('ID','Target','time','value')],  ID +Target ~ time, fun.aggregate = min, na.rm=T, fill=9999)
+d2$time <- as.numeric(sub('.*\\.', '', d2$dw_id_full))
 
-write.csv(d1, './Data/Result1.csv')
+d2 <- d2[order(d2$ID, d2$time),]
 
-d1.alt <- dcast(c1.m[,c('ID','Target','time','value')],  ID +time~ Target, fun.aggregate = min, na.rm=T, fill=9999)
+d2 <- merge(d2, key1, by.x='ID',by.y='id', all.x=T)
 
-d1.alt <- d1.alt[!(d1.alt$ID %in% c(38,39, 48, 49)),] #these IDs were not included in study
+d2.m <- melt(d2[,c('ID','time','lyta_ct','piab_ct','Household #')], id.vars=c('ID','time','Household #'))
+
+d2.m$variable <- gsub('_ct','' ,d2.m$variable)
+
+names(d2.m) <- c('ID', 'time','Household','Target','value')
+
+d3 <- dcast(d2.m[,c('ID','Target','time','value')],  ID +Target ~ time, fun.aggregate = min, na.rm=T, fill=9999)
+
+write.csv(d3, './Data/Result1.csv')
+
+
+
+d1.alt <- d2[,c('ID','time','lyta_ct','piab_ct')]
+d1.alt <- d1.alt[!(d1.alt$ID %in% c(38,39, 48, 49,58,59,102,103,104,105,106,107)),] #these IDs were not included in study
 
 write.csv(d1.alt, './Data/Result2.csv') #Anne's preferred format
 
-c1.m <- c1.m[!(c1.m$ID %in% c(38,39)),] #these IDs were not included in study
+d2.m <- d2.m[!(d2.m$ID %in% c(38,39, 48, 49,58,59,102,103,104,105,106,107)),] #these IDs were not included in study
 
-d1.a <- acast(c1.m[,c('ID','Target','time','value','Household')], Target ~ ID +Household ~ time, fun.aggregate=min, na.rm=T, fill=9999)
+d3.a <- acast(d2.m[,c('ID','Target','time','value','Household')], Target ~ ID +Household ~ time, fun.aggregate=min, na.rm=T, fill=9999)
 
-d1.ds <- reshape2::dcast(c1.m[,c('ID','Target','time','value','Household')],   Household +ID+ time ~ Target, fun.aggregate=min, na.rm=T, fill=9999)
+d1.ds <- reshape2::dcast(d2.m[,c('ID','Target','time','value','Household')],   Household +ID+ time ~ Target, fun.aggregate=min, na.rm=T, fill=9999)
 
 
 ```
@@ -161,15 +162,15 @@ d1.ds <- reshape2::dcast(c1.m[,c('ID','Target','time','value','Household')],   H
 
 piaB
 
-```{r, fig.width=4, fig.height=8}
-piab.plot <- heat.fun(target='piab')
+```{r, fig.width=4, fig.height=9}
+piab.plot <- heat.fun(target='piab',data.array=d3.a)
 ```
 
 lytA
 
 ```{r, fig.width=4, fig.height=8}
 
-lyta.plot <- heat.fun(target='lyta')
+lyta.plot <- heat.fun(target='lyta',data.array=d3.a)
 
 ```
 
@@ -178,10 +179,10 @@ Contacts
 ## Summary stats
 
 ```{r}
-c1.m.m <- melt(c1.m[,c('Target','ID','Sample','value','Household') ],
-                     id.vars=c('Target','ID','Sample','Household')) 
+c1.m.m <- melt(d2.m[,c('Target','ID','time','value','Household') ],
+                     id.vars=c('Target','ID','time','Household')) 
                      
-c1.m.c <- dcast(c1.m.m, ID + Household + Sample  ~Target, fun.aggregate = min, fill=999)
+c1.m.c <- dcast(c1.m.m, ID + Household + time  ~Target, fun.aggregate = min, fill=999)
 
 #N people
 length(unique(c1.m.c$ID))
@@ -238,6 +239,7 @@ q0b <- read_excel('./Data/confidential/SCOPE Intake questionnaire_December 7, 20
 names(q0b) <- names(q0)
 #str(q0b[,select.colnames])
 
+q0$`Date of Visit` <- as.Date(q0$`Date of Visit`)
 q0_combine <- bind_rows(q0, q0b)
 
 select.colnames <- c('MRN', 
@@ -297,11 +299,12 @@ q1a <- read_excel('./Data/confidential/survey_data_to_clean_DMW.xlsx')
 q1a$visit_date_cleaned <- as.Date(as.numeric(q1a$visit_date_cleaned), origin='1899-12-30')
 
 q1b <- read_excel('./Data/confidential/SCOPE Fortnightly Questionnaire_December 7, 2021_13.03.xlsx', skip=1)
-q1b$MRN_cleaned <- as.numeric(q1b$MRN_cleaned)
+q1b$MRN_cleaned <- as.numeric(q1b$MRN)
+q1b$MRN <- as.numeric(q1b$MRN)
 q1 <- bind_rows(q1a, q1b)
 
 
-q1 <- q1[,c(which(names(q1) %in% select.colnames.q1),grep('Which symptoms are you experiencing today', names(q1)),grep('Have you had any of the following symptoms', names(q1))  )]
+q1 <- q1[,c(which(names(q1) %in% select.colnames),grep('Which symptoms are you experiencing today', names(q1)),grep('Have you had any of the following symptoms', names(q1))  )]
 
 names(q1) <-c('MRN','scope_id', 'visit_date', 'visitN', 'visit_location','recent_social_activities','social_activity_type', 'contact_children','age_child_contacts', 'frequency_child_contacts', 'time_day_child_contacts','recent_covid_test', 'recent_doctor','recent_abx', 'recent_vaccines', 'sample_time', 'current_nasal','current_cough', 'current_runny_nose', 'current_sore_throat','current_fever', 'other_symp1','othr_symp2','recent_nasal', 'recent_cough', 'recent_runny_nose', 'recent_sore_throat', 'recent_fever' , 'recent_other_symp1','recent_other_symp2')
    
