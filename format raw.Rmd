@@ -150,7 +150,10 @@ c1.m <- c1.m[order(c1.m$ID, c1.m$time),]
 
 c1.m <- merge(c1.m, key1, by.x='ID',by.y='id', all.x=T)
 
+c1.m <- c1.m[!(c1.m$ID %in% c(38,39, 48,49, 58, 59)),]
+
 d1 <- dcast(c1.m[,c('ID','Target','time','value')],  ID +Target ~ time, fun.aggregate = min, na.rm=T, fill=9999)
+
 
 write.csv(d1, './Data/Result1.csv')
 
