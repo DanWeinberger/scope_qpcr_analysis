@@ -56,12 +56,12 @@ key3 <- cbind.data.frame('id'=c(100:101) , 'Household'=c(51,51) )
 
 key1 <- bind_rows(key1,key3)
 
-file_list <- list.files(path="./Data/cleaned")
+file_list <- list.files(path="./Data/Final Scope Results Drift Correction")
   
  all.res <-
    lapply(file_list, function(x){
      print(x)
-     ds <- read_excel(paste0("./Data/cleaned/",x), skip=19)
+     ds <- read_excel(paste0("./Data/Final Scope Results Drift Correction/",x), skip=19)
      ds$expt <- substr(x,1,4)
      ds$Sample <- as.character(ds$Sample)
      ds$Target <- as.character(ds$Target)
@@ -112,7 +112,19 @@ c1$Cq[is.na(c1$Cq)] <- 45
 
 c1.m <- reshape2::melt(c1, id.vars= c('Sample','Target','plate'))
 
-c1.c <- reshape2::dcast(c1.m, Sample+plate +variable ~ Target, fun.aggregate = min, fill=9999)
+##If sample tested multiple times call pos if pos on multiple runs
+
+c1.m <- c1.m %>%
+  group_by(Sample, Target) %>%
+  mutate(N_tests= n(), n_pos=sum(value<45), ct_pos=mean(value[value<45], na.rm=T) ) %>%
+  ungroup() 
+
+c1.m$ct_pos2 <- c1.m$ct_pos
+
+c1.m$ct_pos2[c1.m$N_tests>1 & c1.m$n_pos<=1] <- 45
+c1.m$ct_pos2[is.nan(c1.m$ct_pos)] <- 45
+
+c1.c <- reshape2::dcast(c1.m[,c('Sample','variable','Target','ct_pos2')], Sample +variable ~ Target, fun.aggregate = min, fill=9999, value.var='ct_pos2')
 
 c1.c$pos <- c1.c$lyta<40 & c1.c$piab<40
 
