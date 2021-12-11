@@ -347,6 +347,11 @@ read in newly entered surveys
 ```{r}
 q1b <- read_excel('./data/confidential/SCOPE Fortnightly Questionnaire_December 7, 2021_13.03.xlsx', skip=1)
 
+#q1b2 <- read_excel('./data/confidential/SCOPE Fortnightly Questionnaire_December 11, 2021_13.30.xlsx', skip=1)
+
+#q1b <- bind_rows(q1b1, q1b2)
+
+
 names(q1b) <- orig.colnames
 
 q1b <- q1b[,c(which(names(q1b) %in% select.colnames.q1),grep('Which symptoms are you experiencing today', names(q1b)),grep('Have you had any of the following symptoms', names(q1b))  )]
@@ -417,6 +422,15 @@ age1$MRN_cleaned <- gsub( 'MR', '',age1$`MR#`)
 age1 <- age1[,c('MRN_cleaned', 'AGE' )]
 
 q4 <- merge(q4, age1, by='MRN_cleaned', all.x=T)
+
+##Flag duplicate survey entries
+
+q4 <- q4 %>%
+  group_by(MRN_cleaned, visitN) %>%
+  mutate(repN = row_number())
+
+q4 <- q4[q4$repN==1,]
+
 #View(q2[is.na(q2$age),])
 #miss.dob <- q0a[q0a$dob %in% c('N/A',"19-04-2021") | is.na(q0$dob), c('dob','MRN_cleaned','MRN') ]
 #write.csv(miss.dob,'./Data/confidential/check_dob.csv')
@@ -702,3 +716,28 @@ Simple model
 mod1 <- glm(piab_pos ~ child_contact_u12m+ child_contact_13_23m + child_contact_24_59m + child_contact_5_10y + child_contact_over10y, data=e3[e3$child_contact_13_23m!='Not answered',], family=binomial(link='log'))
 summary(mod1)
 ```
+
+```{r}
+mod1 <- glm(piab_pos ~  child_contact_24_59m , data=e3[e3$child_contact_13_23m!='Not answered',], family=binomial(link='log'))
+summary(mod1)
+```
+
+
+There are some survey results missing. We lose information for these people. But we know their child contacts at other time points so can infer
+```{r}
+e3_filled <- e3 %>%
+  group_by(ID) %>%
+  mutate(any_contact_u12m= max(child_contact_u12m=='Yes', na.rm=T),
+         any_contact_13_23m= max(child_contact_13_23m=='Yes', na.rm=T),
+         any_contact_24_59m= max(child_contact_24_59m=='Yes', na.rm=T),
+         any_contact_5_10y= max(child_contact_5_10y=='Yes', na.rm=T),
+         any_contact_over_10y= max(child_contact_over10y=='Yes', na.rm=T),
+         )
+
+mod2 <- glm(piab_pos ~ any_contact_u12m+ any_contact_13_23m + any_contact_24_59m + any_contact_5_10y + any_contact_over_10y, data=e3_filled, family=binomial(link='logit'))
+summary(mod2)
+
+table(mod2)
+
+```
+
