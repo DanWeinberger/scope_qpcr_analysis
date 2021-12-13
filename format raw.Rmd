@@ -38,8 +38,6 @@ ID 6.1 Saliva was very low under 100 ul.
 
 ID 5.6 qpcr LytA -piaB was ran in plate A155_scope_2021_06_02 .The issue was the label: FIXED 5.5 to 5.6
 
-ID 12.4 qPCR LytA -piaB was ran in plate A150_scope_2021_05_24.The issue was the label --FIXED 12.3 to 12.4
-
 ID 62.2,63.2 samples were picked up 1 month after .We didn't see any growth after incubation 37 degree over night
 
 ID 20.5 - 21.5 to verify
@@ -205,6 +203,8 @@ length(unique(c1.m.c$ID))
 length(unique(c1.m.c$Household))
 
 
+
+
 #N samples
 nrow(c1.m.c)
 #length(unique(c1.m.c$Sample[c1.m$Target=='piab']))
@@ -236,6 +236,13 @@ sum(sapply(c1.m.spl.id, function(x){
 }
   ))
 
+
+## Ave age
+age1 <- read_excel('./Data/confidential/AGE Scope Participants samples pick-up 06-15-2021.xlsx', skip=1)
+names(age1)[1] <- 'ID'
+age1 <- age1[ which(age1$ID %in% unique(c1.m.c$ID)),]
+mean(age1$AGE)
+range(age1$AGE)
 
 ```
 
@@ -420,10 +427,12 @@ q4 <- merge(q3, key2, by.x="MRN_cleaned", by.y= "mr_clean" , all.x=T)
 
 q4$flag_id <- is.na(q4$`ID Number`)
 age1 <- read_excel('./Data/confidential/AGE Scope Participants samples pick-up 06-15-2021.xlsx', skip=1)
+
 age1$MRN_cleaned <- gsub( 'MR', '',age1$`MR#`)
 age1 <- age1[,c('MRN_cleaned', 'AGE' )]
 
 q4 <- merge(q4, age1, by='MRN_cleaned', all.x=T)
+
 
 ##Flag duplicate survey entries
 
@@ -736,7 +745,11 @@ e3_filled <- e3 %>%
          any_contact_over_10y= max(child_contact_over10y=='Yes', na.rm=T),
          )
 
-mod2 <- glm(piab_pos ~ any_contact_u12m+ any_contact_13_23m + any_contact_24_59m + any_contact_5_10y + any_contact_over_10y, data=e3_filled, family=binomial(link='logit'))
+e3_filled$any_contact13_59m <- e3_filled$any_contact_13_23m + e3_filled$any_contact_24_59m
+e3_filled$any_contact13_59m[e3_filled$any_contact13_59m >1] <- 1
+
+mod2 <- glm(piab_pos ~ any_contact_u12m+ any_contact_13_23m + any_contact_24_59m + any_contact_5_10y + any_contact_over_10y 
+            , data=e3_filled, family=binomial(link='logit'))
 summary(mod2)
 
 
