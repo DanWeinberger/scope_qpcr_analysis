@@ -249,14 +249,9 @@ range(age1$AGE)
 
 ```
 
-
-
-
 ## Merge in results with master file
---To do:
--harmonize column names between fortnightly and initial questionaire so we can merge
--Fix dates
--Check missing visitNs
+
+--To do: -harmonize column names between fortnightly and initial questionaire so we can merge -Fix dates -Check missing visitNs
 
 Intake questionaire
 
@@ -326,7 +321,8 @@ q0$MRN <- as.numeric(gsub('MR','',q0$MRN))
 q0.baseline.vars <- c('dob','scope_id',"pos_covid_past","pos_covid_date","pneu_vax", "pneu_vax_date",'ethnicity','weight','height','education', "immuno_meds" ,"diabetes_meds", "asthma_meds","flu_shot","hh_relationship", "relationship_duration")
 ```
 
-Fortnightly questionnaire  and  intake cleaning...do not run each time
+Fortnightly questionnaire and intake cleaning...do not run each time
+
 ```{r}
 q1 <- read_excel('./Data/confidential/SCOPE Fortnightly Questionnaire_September 24, 2021_12.00_clean.xlsx', skip=1)
 
@@ -336,7 +332,6 @@ select.colnames.q1 <- c('MRN', "Fortnightly visit number:", "SCOPE ID if known/l
 
 rename.q1 <-c('MRN','scope_id', 'visit_date', 'visitN', 'visit_location','recent_social_activities','social_activity_type', 'contact_children','age_child_contacts', 'frequency_child_contacts', 'time_day_child_contacts','recent_covid_test', 'recent_doctor','recent_abx', 'recent_vaccines', 'sample_time', 'current_nasal','current_cough', 'current_runny_nose', 'current_sore_throat','current_fever', 'other_symp1','othr_symp2','recent_nasal', 'recent_cough', 'recent_runny_nose', 'recent_sore_throat', 'recent_fever' , 'recent_other_symp1','recent_other_symp2')
 ```
-
 
 ```{r, eval=F}
 q1 <- q1[,c(which(names(q1) %in% select.colnames.q1),grep('Which symptoms are you experiencing today', names(q1)),grep('Have you had any of the following symptoms', names(q1))  )]
@@ -395,8 +390,6 @@ q1b <- q1b %>%
 
 q1b <- q1b[q1b$repN==1,]
 ```
-
-
 
 ```{r}
 q2 <- read_excel('./data/confidential/survey_data_to_clean_DMW.xlsx')
@@ -582,6 +575,7 @@ write.csv(exp3,'./Data/Confidential/export_pfizer.csv')
 
 e3$month <- month(e3$visit_date_cleaned)
 
+
 e3$contact_children[is.na(e3$contact_children) | e3$contact_children=='NA'] <- 'missing'
 
 e3$child_contact_u12m <- 'No'
@@ -592,23 +586,28 @@ e3$child_contact_u5y <- 'No'
 e3$child_contact_u5y[grep('<12 m', e3$age_child_contacts)] <- 'Yes'
 e3$child_contact_u5y[grep('13-23 mo', e3$age_child_contacts)] <- 'Yes'
 e3$child_contact_u5y[grep('24-59 months', e3$age_child_contacts)] <- 'Yes'
-e3$child_contact_u5y[is.na(e3$age_child_contacts)] <- 'Not answered'
+e3$child_contact_u5y[is.na(e3$age_child_contacts) & e3$contact_children!='No'] <- 'Not answered'
+
+
+e3$child_contact_u12m <- 'No'
+e3$child_contact_u12m[grep('<12 m', e3$age_child_contacts)] <- 'Yes'
+e3$child_contact_u12m[is.na(e3$age_child_contacts) & e3$contact_children!='No'] <- 'Not answered'
 
 e3$child_contact_13_23m <- 'No'
 e3$child_contact_13_23m[grep('13-23 mo', e3$age_child_contacts)] <- 'Yes'
-e3$child_contact_13_23m[is.na(e3$age_child_contacts)] <- 'Not answered'
+e3$child_contact_13_23m[is.na(e3$age_child_contacts) & e3$contact_children!='No'] <- 'Not answered'
 
 e3$child_contact_24_59m <- 'No'
 e3$child_contact_24_59m[grep('24-59 months', e3$age_child_contacts)] <- 'Yes'
-e3$child_contact_24_59m[is.na(e3$age_child_contacts)] <- 'Not answered'
+e3$child_contact_24_59m[is.na(e3$age_child_contacts) & e3$contact_children!='No'] <- 'Not answered'
 
 e3$child_contact_5_10y <- 'No'
 e3$child_contact_5_10y[grep('5-10 years', e3$age_child_contacts)] <- 'Yes'
-e3$child_contact_5_10y[is.na(e3$age_child_contacts)] <- 'Not answered'
+e3$child_contact_5_10y[is.na(e3$age_child_contacts) & e3$contact_children!='No'] <- 'Not answered'
 
 e3$child_contact_over10y <- 'No'
 e3$child_contact_over10y[grep('>10 years', e3$age_child_contacts)] <-'Yes'
-e3$child_contact_over10y[is.na(e3$age_child_contacts)] <- 'Not answered'
+e3$child_contact_over10y[is.na(e3$age_child_contacts) & e3$contact_children!='No'] <- 'Not answered'
 
 
 
@@ -793,8 +792,8 @@ mod1 <- glm(piab_pos ~  child_contact_24_59m , data=e3[e3$child_contact_13_23m!=
 summary(mod1)
 ```
 
-
 There are some survey results missing. We lose information for these people. But we know their child contacts at other time points so can infer
+
 ```{r}
 e3_filled <- e3 %>%
   group_by(ID) %>%
@@ -815,4 +814,3 @@ summary(mod2)
 
 
 ```
-
