@@ -512,31 +512,33 @@ write.csv(exp1,'./Data/Confidential/export_pfizer.csv')
 
 e3$month <- month(e3$visit_date_cleaned)
 
-e3$child_contact_u12m <- 'No'
-e3$child_contact_u12m[grep('<12 m', e3$age_child_contacts)] <- 'Yes'
-e3$child_contact_u12m[is.na(e3$age_child_contacts)] <- 'Not answered'
 
 e3$child_contact_u5y <- 'No'
 e3$child_contact_u5y[grep('<12 m', e3$age_child_contacts)] <- 'Yes'
 e3$child_contact_u5y[grep('13-23 mo', e3$age_child_contacts)] <- 'Yes'
 e3$child_contact_u5y[grep('24-59 months', e3$age_child_contacts)] <- 'Yes'
-e3$child_contact_u5y[is.na(e3$age_child_contacts)] <- 'Not answered'
+e3$child_contact_u5y[is.na(e3$age_child_contacts) & e3$contact_children!='No'] <- 'Not answered'
+
+
+e3$child_contact_u12m <- 'No'
+e3$child_contact_u12m[grep('<12 m', e3$age_child_contacts)] <- 'Yes'
+e3$child_contact_u12m[is.na(e3$age_child_contacts) & e3$contact_children!='No'] <- 'Not answered'
 
 e3$child_contact_13_23m <- 'No'
 e3$child_contact_13_23m[grep('13-23 mo', e3$age_child_contacts)] <- 'Yes'
-e3$child_contact_13_23m[is.na(e3$age_child_contacts)] <- 'Not answered'
+e3$child_contact_13_23m[is.na(e3$age_child_contacts) & e3$contact_children!='No'] <- 'Not answered'
 
 e3$child_contact_24_59m <- 'No'
 e3$child_contact_24_59m[grep('24-59 months', e3$age_child_contacts)] <- 'Yes'
-e3$child_contact_24_59m[is.na(e3$age_child_contacts)] <- 'Not answered'
+e3$child_contact_24_59m[is.na(e3$age_child_contacts) & e3$contact_children!='No'] <- 'Not answered'
 
 e3$child_contact_5_10y <- 'No'
 e3$child_contact_5_10y[grep('5-10 years', e3$age_child_contacts)] <- 'Yes'
-e3$child_contact_5_10y[is.na(e3$age_child_contacts)] <- 'Not answered'
+e3$child_contact_5_10y[is.na(e3$age_child_contacts) & e3$contact_children!='No'] <- 'Not answered'
 
 e3$child_contact_over10y <- 'No'
 e3$child_contact_over10y[grep('>10 years', e3$age_child_contacts)] <-'Yes'
-e3$child_contact_over10y[is.na(e3$age_child_contacts)] <- 'Not answered'
+e3$child_contact_over10y[is.na(e3$age_child_contacts) & e3$contact_children!='No'] <- 'Not answered'
 
 
 ```
