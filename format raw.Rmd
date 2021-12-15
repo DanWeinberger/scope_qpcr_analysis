@@ -213,6 +213,9 @@ nrow(c1.m.c)
 #N positive
 sum(c1.m.c$piab<40 )
 
+sum(c1.m.c$piab<40  &c1.m.c$lyta>=40)
+sum(c1.m.c$piab<40  &c1.m.c$lyta<40)
+
 #% positive
 sum(c1.m.c$piab<40 )/nrow(c1.m.c)
 
@@ -430,6 +433,7 @@ age1 <- read_excel('./Data/confidential/AGE Scope Participants samples pick-up 0
 
 age1$MRN_cleaned <- gsub( 'MR', '',age1$`MR#`)
 age1 <- age1[,c('MRN_cleaned', 'AGE' )]
+age1$MRN_cleaned <- as.numeric(age1$MRN_cleaned)
 
 q4 <- merge(q4, age1, by='MRN_cleaned', all.x=T)
 
@@ -476,7 +480,7 @@ heat.fun.contact()
 ```
 
 ```{r, echo=F}
-hist(q4$AGE, main='Distribution of ages', xlab='Age(y)')
+hist(age1$AGE, main='Distribution of ages', xlab='Age(y)')
 ```
 
 ```{r, echo=F}
@@ -512,21 +516,58 @@ e3$social_activity_type <- as.character(e3$social_activity_type)
 e3$social_activity_type[e3$recent_social_activities=='No'] <- 'No'
 
 e3$frequency_child_contacts <- as.character(e3$frequency_child_contacts)
-e3$frequency_child_contacts[e3$contact_children=='No'] <- 'No'
+
+e3$frequency_child_contacts[e3$contact_children=='No'] <- 'No contact'
 
 e3$piab_pos <- NA
 e3$piab_pos[e3$piab >=40 & !is.na(e3$piab)] <- 0 
 e3$piab_pos[e3$piab <40 & !is.na(e3$piab)] <- 1 
 e3$piab_pos <- as.factor(e3$piab_pos)
 
+e3$smoke_dic <- NA
+e3$smoke_dic[grep('Yes',e3$current_smoke)] <- 1
+e3$smoke_dic[grep('No',e3$current_smoke)] <- 0
+
+e3$pneu_vax_dic <- NA
+e3$pneu_vax_dic[grep('Yes',e3$pneu_vax)] <- 1
+e3$pneu_vax_dic[grep('No',e3$pneu_vax)] <- 0
+
+e3$pneu_vax_date[e3$pneu_vax_date=='N/A'] <- NA
+
+e3$education <- tolower(e3$education)
+
+e3$height <- gsub(' ', '', e3$height)
 ## export
 
-exp1 <- e3[,c('ID','time', 'age','education','ethnicity',"hh_relationship"  ,        "relationship_duration","pneu_vax" ,"pneu_vax_date" ,"weight", "height","pos_covid_past" ,          "pos_covid_date","current_smoke", "contact_children" ,       
+id.ages <- unique(e3[,c('ID','AGE')])
+id.ages <- id.ages[!is.na(id.ages$AGE),]
+
+exp1 <- e3[,c('ID','time','piab', 'lyta','Household', 'education','ethnicity',"hh_relationship"  ,        "relationship_duration","pneu_vax_dic" ,"pneu_vax_date" ,"weight", "height","pos_covid_past" ,          "pos_covid_date","smoke_dic", "contact_children" ,       
 "age_child_contacts"  ,     "frequency_child_contacts" ,"time_day_child_contacts" )]
 
-write.csv(exp1,'./Data/Confidential/export_pfizer.csv')
+baseline.chars <- exp1[,c('ID','Household', 'education','ethnicity',"hh_relationship"  ,        "relationship_duration","pneu_vax_dic" ,"pneu_vax_date" ,"weight", "height","pos_covid_past" ,          "pos_covid_date","smoke_dic")]
+
+baseline.chars <- baseline.chars %>%
+  group_by(ID) %>%
+  mutate(smoke_dic= max(smoke_dic, na.rm=T))
+
+baseline.chars <-unique(baseline.chars[!is.na(baseline.chars$ethnicity),])
+baseline.chars <- baseline.chars %>%
+  group_by(ID) %>%
+  mutate(repN=row_number())
+baseline.chars <- baseline.chars[baseline.chars$repN==1,]
+baseline.chars$repN <- NULL
+
+exp2 <- merge(id.ages, exp1[c('ID','time','piab', 'lyta',"contact_children" ,       
+"age_child_contacts"  ,     "frequency_child_contacts" ,"time_day_child_contacts")], by='ID', all.y=T)
+
+exp3 <- merge(exp2,baseline.chars, by='ID', all.x=T )
+
+write.csv(exp3,'./Data/Confidential/export_pfizer.csv')
 
 e3$month <- month(e3$visit_date_cleaned)
+
+e3$contact_children[is.na(e3$contact_children) | e3$contact_children=='NA'] <- 'missing'
 
 e3$child_contact_u12m <- 'No'
 e3$child_contact_u12m[grep('<12 m', e3$age_child_contacts)] <- 'Yes'
@@ -553,6 +594,10 @@ e3$child_contact_5_10y[is.na(e3$age_child_contacts)] <- 'Not answered'
 e3$child_contact_over10y <- 'No'
 e3$child_contact_over10y[grep('>10 years', e3$age_child_contacts)] <-'Yes'
 e3$child_contact_over10y[is.na(e3$age_child_contacts)] <- 'Not answered'
+
+
+
+
 
 
 ```
@@ -585,7 +630,7 @@ table1(~piab_pos|`time_day_child_contacts` , data= e3 )
 
 What ages do you have contact with?
 
-\<12m?
+<12m?
 
 ```{r, echo=F}
 table1(~piab_pos|child_contact_u12m  , data= e3 )
