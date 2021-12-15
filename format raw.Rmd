@@ -262,10 +262,14 @@ Intake questionaire
 
 ```{r, echo=F}
 q0a <-  read_excel('./Data/confidential/SCOPE Intake questionnaire_September 24, 2021_11.57.xlsx', skip=1)
+
 q0a$`Date of Visit` <- parse_date_time(q0a$`Date of Visit`, orders=c('d-b-Y','d/b/Y','d-m-Y','m/d/Y','m/d/y','Y-m-d'))
+
 q0b <- read_excel('./Data/confidential/SCOPE Intake questionnaire_December 7, 2021_13.05.xlsx', skip=1)
 names(q0b) <- names(q0a)
-q0 <- q0a 
+
+q0 <- bind_rows(q0a, q0b) 
+
 select.colnames <- c('MRN', 
             "SCOPE ID (eg. 0007, 0044, 0072 etc) if known/listed", 
             "Date of Visit","Visit Location - Selected Choice",
@@ -305,16 +309,20 @@ select.colnames <- c('MRN',
          "Time of sample collection:" 
          )
 q0 <- q0[,c(which(names(q0) %in% select.colnames),grep('Are you experiencing any of the following symptoms today', names(q0)) )]
-q0b <- q0b[,c(which(names(q0b) %in% select.colnames),grep('Are you experiencing any of the following symptoms today', names(q0b)) )]
+
+#q0b <- q0b[,c(which(names(q0b) %in% select.colnames),grep('Are you experiencing any of the following symptoms today', names(q0b)) )]
+
 rename.intake <- c('MRN','scope_id', 'visit_date','visit_location', 'dob','pos_covid_past', 'pos_covid_date', 'pneu_vax', 'pneu_vax_date','pneumonia_hosp', 'recent_abx', 'weight','height','education','ethnicity', 'hh_relationship', 'relationship_duration','hh_contact_time','flu_shot', 'recent_nasal', 'recent_cough', 'recent_runny_nose', 'recent_sore_throat', 'recent_fever','immuno_meds','diabetes_meds','asthma_meds', 'current_smoke', 'contact_children','age_child_contacts', 'frequency_child_contacts', 'time_day_child_contacts', 'time_sample', 'current_nasal','current_cough', 'current_runny_nose', 'current_sore_throat','current_fever', 'other_symp1','othr_symp2')
+
 names(q0) <- rename.intake
-names(q0b) <- rename.intake
+
 q0$visit_date[q0$visit_date %in% c( '12/APR/2021','12 Apr 2021','12/14/2021')] <- '2021-04-12'
 q0$visit_date_clean <- parse_date_time(q0$visit_date, orders=c('d-b-Y','d/b/Y','d-m-Y','m/d/Y','m/d/y','Y-m-d'))
 q0$visitN <- '1'
-q0b$visitN <- '1'
-q0b$MRN <- as.numeric(gsub('MR','',q0b$MRN))
-#which variables are characteristics of the person (not time varying)
+
+q0$MRN <- as.numeric(gsub('MR','',q0$MRN))
+
+
 q0.baseline.vars <- c('dob','scope_id',"pos_covid_past","pos_covid_date","pneu_vax", "pneu_vax_date",'ethnicity','weight','height','education', "immuno_meds" ,"diabetes_meds", "asthma_meds","flu_shot","hh_relationship", "relationship_duration")
 ```
 
@@ -338,7 +346,12 @@ names(q1) <- rename.q1
 q1$visit_date_clean <- parse_date_time(q1$visit_date, orders=c('d-b-Y','d/b/Y','d-m-Y','d-m-y','m/d/Y','m/d/y','Y-m-d'))
            
 q1$visit_date <- as.Date(q1$visit_date)
+
+q1$MRN <-  gsub("mr","", q1$MRN )
+q1$MRN <- as.numeric(gsub('MR','', q1$MRN)) 
+
 q1 <- bind_rows(q0[,-which(names(q0) %in% q0.baseline.vars)], q1) #combine q0, q1
+
 q1$MRN <-  gsub("_visit#2.pdf","", q1$MRN )
 q1$MRN <-  gsub("MR","", q1$MRN )
 q1$MRN <-  gsub("mr","", q1$MRN )
@@ -391,8 +404,10 @@ q2$visit_date <- as.Date(as.numeric(q2$visit_date), origin='1900-01-01')
 q2$visit_date_cleaned <- as.Date(as.numeric(q2$visit_date_cleaned), origin='1900-01-01')
 q2$visit_date <- q2$visit_date_cleaned
   
-q0b$visitN <- as.numeric(q0b$visitN)
-q2 <- bind_rows(q2, q0b[,-which(names(q0b) %in% q0.baseline.vars)])
+q0$visitN <- as.numeric(q0$visitN)
+q0$MRN <- as.numeric(q0$MRN)
+
+q2 <- bind_rows(q2, q0[,-which(names(q0) %in% q0.baseline.vars)])
 q2 <- bind_rows(q2, q1b)
 q2$visit_date_cleaned <- q2$visit_date
 q2$MRN_cleaned[is.na(q2$MRN_cleaned)] <-
@@ -542,7 +557,7 @@ e3$height <- gsub(' ', '', e3$height)
 id.ages <- unique(e3[,c('ID','AGE')])
 id.ages <- id.ages[!is.na(id.ages$AGE),]
 
-exp1 <- e3[,c('ID','time','piab', 'lyta','Household', 'education','ethnicity',"hh_relationship"  ,        "relationship_duration","pneu_vax_dic" ,"pneu_vax_date" ,"weight", "height","pos_covid_past" ,          "pos_covid_date","smoke_dic", "contact_children" ,       
+exp1 <- e3[,c('ID','time','piab', 'lyta','Household','MRN_cleaned', 'education','ethnicity',"hh_relationship"  ,        "relationship_duration","pneu_vax_dic" ,"pneu_vax_date" ,"weight", "height","pos_covid_past" ,          "pos_covid_date","smoke_dic", "contact_children" ,       
 "age_child_contacts"  ,     "frequency_child_contacts" ,"time_day_child_contacts" )]
 
 baseline.chars <- exp1[,c('ID','Household', 'education','ethnicity',"hh_relationship"  ,        "relationship_duration","pneu_vax_dic" ,"pneu_vax_date" ,"weight", "height","pos_covid_past" ,          "pos_covid_date","smoke_dic")]
@@ -551,7 +566,6 @@ baseline.chars <- baseline.chars %>%
   group_by(ID) %>%
   mutate(smoke_dic= max(smoke_dic, na.rm=T))
 
-baseline.chars <-unique(baseline.chars[!is.na(baseline.chars$ethnicity),])
 baseline.chars <- baseline.chars %>%
   group_by(ID) %>%
   mutate(repN=row_number())
@@ -562,6 +576,7 @@ exp2 <- merge(id.ages, exp1[c('ID','time','piab', 'lyta',"contact_children" ,
 "age_child_contacts"  ,     "frequency_child_contacts" ,"time_day_child_contacts")], by='ID', all.y=T)
 
 exp3 <- merge(exp2,baseline.chars, by='ID', all.x=T )
+exp3 <- exp3[order(exp3$ID, exp3$time),]
 
 write.csv(exp3,'./Data/Confidential/export_pfizer.csv')
 
