@@ -391,6 +391,7 @@ q1b <- q1b %>%
 q1b <- q1b[q1b$repN==1,]
 ```
 
+
 ```{r}
 q2 <- read_excel('./data/confidential/survey_data_to_clean_DMW.xlsx')
 q2$visit_date <- as.Date(as.numeric(q2$visit_date), origin='1900-01-01')
@@ -402,6 +403,11 @@ q0$MRN <- as.numeric(q0$MRN)
 
 q2 <- bind_rows(q2, q0[,-which(names(q0) %in% q0.baseline.vars)])
 q2 <- bind_rows(q2, q1b)
+
+q2$MRN[q2$MRN==17330176] <- 1733076 #fix typo
+q2$MRN[q2$MRN==1156975 ] <- 1156974 #fix typo
+q2$MRN[is.na(q2$MRN) & q2$visit_date_cleaned=='2021-03-17'] <- 4149574
+
 q2$visit_date_cleaned <- q2$visit_date
 q2$MRN_cleaned[is.na(q2$MRN_cleaned)] <-
   q2$MRN[is.na(q2$MRN_cleaned)]
@@ -453,6 +459,9 @@ q4 <- q4 %>%
   mutate(repN = row_number())
 
 q4 <- q4[q4$repN==1,]
+
+q4 <- q4[!(q4$`ID Number`  %in% c(38,39, 48,49, 58, 59, 102, 103)),]
+q4 <- q4[!(q4$`ID Number`==6 & q4$visitN==1),]
 
 #View(q2[is.na(q2$age),])
 #miss.dob <- q0a[q0a$dob %in% c('N/A',"19-04-2021") | is.na(q0$dob), c('dob','MRN_cleaned','MRN') ]
