@@ -29,6 +29,7 @@ library(ggplotify)
 library(table1)
 library(lubridate)
 library(patchwork)
+library(msm)
 source('heat.fun.R')
 source('heat.fun.contact.R')
 
@@ -823,3 +824,58 @@ summary(mod2)
 
 
 ```
+
+## Longitudinal analysis
+Uses a multi-state model framework to capture transition probabilities
+```{r}
+
+l1 <- e3
+l1$day <- 0
+l1$day[l1$time==2] <- 14
+l1$day[l1$time==3] <- 14*2
+l1$day[l1$time==4] <- 14*3
+l1$day[l1$time==5] <- 14*4
+l1$day[l1$time==6] <- 14*5
+
+l1$state <- NA
+l1$state[l1$piab_pos==0 & !is.na(l1$piab_pos)] <- 1
+l1$state[l1$piab_pos==1 & !is.na(l1$piab_pos)] <- 2
+#l1$state <- as.factor(l1$state)
+
+
+q1 <- rbind(c( 0,0.01),
+           c(0.02,0)
+)
+
+l1 <- l1[order(l1$ID, l1$day),]
+
+l2 <- l1[, c('state','child_contact_u5y','child_contact_13_23m',"child_contact_24_59m","child_contact_5_10y", 'ID','day')]
+l2$child_contactu5 =0 #neg or missing
+l2$child_contactu5[l2$child_contact_u5y=='Yes'] =1 #neg or missing
+
+l2$child_1_10 <- 0
+
+l2$child_1_10[l2$child_contact_13_23m=='Yes' | l2$child_contact_24_59m=='Yes' | l2$child_contact_5_10y=='Yes'] <- 1
+
+l2$child_2_10 <- 0
+l2$child_2_10[ l2$child_contact_24_59m=='Yes' | l2$child_contact_5_10y=='Yes'] <- 1
+
+l2$child_5_10 <- 0
+l2$child_5_10[  l2$child_contact_5_10y=='Yes'] <- 1
+
+msm.mod1 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2)
+msm.mod1
+
+msm.mod2 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_1_10))
+msm.mod2
+
+msm.mod3 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_2_10))
+msm.mod3
+
+msm.mod4 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_5_10))
+msm.mod4
+
+
+
+```
+
