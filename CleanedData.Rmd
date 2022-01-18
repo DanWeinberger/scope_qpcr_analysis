@@ -1,0 +1,687 @@
+---
+title: "format_data"
+author: "Dan Weinberger"
+date: "5/25/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+## Final Data
+
+This code uses a final adjudicated version of the data, prepared by Sidiya and Ashley. Raw data files are available under Data/cleaned
+
+## INSTRUCTIONS TO GET SURVEY DATA
+
+1.  Go to Yale qualtrics site
+2.  Navigate to Intake questionaire.
+3.  Download data as .xlsx
+4.  Repeat for fortnightly survey
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(readxl)
+library(reshape2)
+library(dplyr)
+library(stringr)
+
+library(pheatmap)
+library(RColorBrewer)
+library(cowplot)
+library(gridExtra)
+library(ggplotify)
+library(table1)
+library(lubridate)
+library(patchwork)
+source('heat.fun.R')
+source('heat.fun.contact.R')
+
+```
+
+ID 6.1 Saliva was very low under 100 ul.
+
+ID 5.6 qpcr LytA -piaB was ran in plate A155_scope_2021_06_02 .The issue was the label: FIXED 5.5 to 5.6
+
+ID 12.4 qPCR LytA -piaB was ran in plate A150_scope_2021_05_24.The issue was the label --FIXED 12.3 to 12.4
+
+ID 62.2,63.2 samples were picked up 1 month after .We didn't see any growth after incubation 37 degree over night
+
+ID 20.5 - 21.5 to verify
+
+```{r, echo=F}
+ key1 <- read.csv('./Data/hh_id_key.csv')
+
+master1 <- read_excel('./Data/confidential/SCOPE_Master_20210108.xlsx', sheet='COM SAL')
+
+
+key2 <- read_excel('./Data/confidential/SCOPE Participant MRN and ID.xlsx', skip=1)
+key3 <- cbind.data.frame('id'=c(100:101) , 'Household'=c(51,51) )
+
+
+key1 <- bind_rows(key1,key3)
+
+```
+
+What to do if we have borderline positive then negative test:
+
+1) If weak positive for piaB (e.g., 35 Ct or higher) AND at least one of the repeats is \<40, then it is positive
+
+2) If weak positive for piaB (e.g., 35 Ct or higher), AND (2 repeats negative) then NEGATIVE
+
+3) if weak positive for piaB and then negative on 1 repeat performed and negative, then negative
+
+4) If posivi, take ave of Ct among those \<40
+
+```{r}
+master1$piaB[is.na(master1$piaB & master1$piaB_DW==45)] <- 45
+master1$lytA[is.na(master1$lytA & master1$lytA_DW==45)] <- 45
+
+d1 <- master1[, c('timeline','Household #','dw_id_full', "piaB" , "piaB repeated 1","piaB repeated 2","lytA","lyta Repeated 1", "lyta Repeated 2" )]
+
+
+fun1 <- function(ds=d1,varnames=c("piaB" , "piaB repeated 1","piaB repeated 2"), probe){
+  mat1<- apply(ds[varnames],1,function(x){
+    x[x>=40 & !is.na(x)] <- 45
+    N.pos <- sum((x<40 & !is.na(x) ))  #how many negative are there?
+    N.neg <- sum((x>=40 & !is.na(x) ))  #how many negative are there?
+    positive = 1*(N.pos > N.neg & N.pos > 0)
+    
+    if(positive==1){
+    ct <- mean(x[x<40], na.rm=T)
+    }else{
+      ct=45
+    }
+    if(sum(is.na(x))==3){
+      positive=NA
+      ct=9999
+    }
+    return(c('positive'=positive,'ct'=ct))
+  })
+  ds2 <- as.data.frame(t(mat1))
+  names(ds2) <- paste0(probe,'_', names(ds2))
+  return(ds2)
+  }
+  
+piab_check <- fun1(ds=d1,varnames=c("piaB" , "piaB repeated 1","piaB repeated 2"), probe='piab')
+
+lyta_check <- fun1(ds=d1,varnames=c("lytA" , "lyta Repeated 1","lyta Repeated 2"), probe='lyta')
+
+d2 <- cbind.data.frame(d1,piab_check,lyta_check )
+
+
+
+
+```
+
+```{r, fig.width=5, fig.height=5}
+plot(d2$lyta_ct, d2$piab_ct, xlim= c(45,0), ylim=c(45,0), xlab='lytA', ylab='piaB', bty='l')
+abline(a=0, b=1)
+abline(h=40, v=40, col='gray', lty=2)
+```
+
+```{r, echo=F}
+
+d2$ID <- sub("\\.[0-9]+$", "", d2$dw_id_full)
+d2$ID <- as.numeric(sub("CS", "", d2$ID))
+
+
+
+d2$time <- as.numeric(sub('.*\\.', '', d2$dw_id_full))
+
+d2 <- d2[order(d2$ID, d2$time),]
+
+d2 <- merge(d2, key1, by.x='ID',by.y='id', all.x=T)
+
+d2.m <- melt(d2[,c('ID','time','lyta_ct','piab_ct','Household #')], id.vars=c('ID','time','Household #'))
+
+d2.m$variable <- gsub('_ct','' ,d2.m$variable)
+
+names(d2.m) <- c('ID', 'time','Household','Target','value')
+
+d3 <- dcast(d2.m[,c('ID','Target','time','value')],  ID +Target ~ time, fun.aggregate = min, na.rm=T, fill=9999)
+
+write.csv(d3, './Data/Result1.csv')
+
+
+
+d1.alt <- d2[,c('ID','time','lyta_ct','piab_ct')]
+d1.alt <- d1.alt[!(d1.alt$ID %in% c(38,39, 48, 49,58,59,102,103,104,105,106,107)),] #these IDs were not included in study
+
+write.csv(d1.alt, './Data/Result2.csv') #Anne's preferred format
+
+d2.m <- d2.m[!(d2.m$ID %in% c(38,39, 48, 49,58,59,102,103,104,105,106,107)),] #these IDs were not included in study
+
+d3.a <- acast(d2.m[,c('ID','Target','time','value','Household')], Target ~ ID +Household ~ time, fun.aggregate=min, na.rm=T, fill=9999)
+
+d1.ds <- reshape2::dcast(d2.m[,c('ID','Target','time','value','Household')],   Household +ID+ time ~ Target, fun.aggregate=min, na.rm=T, fill=9999)
+
+
+```
+
+## Heatmaps
+
+piaB
+
+```{r, fig.width=4, fig.height=9}
+piab.plot <- heat.fun(target='piab',data.array=d3.a)
+```
+
+lytA
+
+```{r, fig.width=4, fig.height=8}
+
+lyta.plot <- heat.fun(target='lyta',data.array=d3.a)
+
+```
+
+Contacts
+
+## Summary stats
+
+```{r}
+c1.m.m <- melt(d2.m[,c('Target','ID','time','value','Household') ],
+                     id.vars=c('Target','ID','time','Household')) 
+                     
+c1.m.c <- dcast(c1.m.m, ID + Household + time  ~Target, fun.aggregate = min, fill=999)
+
+#N people
+length(unique(c1.m.c$ID))
+
+#N households
+length(unique(c1.m.c$Household))
+
+
+#N samples
+nrow(c1.m.c)
+#length(unique(c1.m.c$Sample[c1.m$Target=='piab']))
+#length(unique(c1.m.c$Sample[c1.m$Target=='lyta']))
+
+#N positive
+sum(c1.m.c$piab<40 )
+
+#% positive
+sum(c1.m.c$piab<40 )/nrow(c1.m.c)
+
+#N positive lytA
+sum(c1.m.c$lyta<40 )
+
+sum(c1.m.c$lyta<40 )/nrow(c1.m.c)
+
+
+#Count N people with piaB positives by IDs
+c1.m.spl.id <- split(c1.m.c, c1.m.c$ID)
+sum(sapply(c1.m.spl.id, function(x){
+  min(x$piab) <40 
+}
+  ))
+
+#Count N HH with piab positives by IDs
+c1.m.spl.id <- split(c1.m.c, c1.m.c$Household)
+sum(sapply(c1.m.spl.id, function(x){
+  min(x$piab) <40 
+}
+  ))
+
+
+```
+
+## Merge in results with master file
+--To do:
+-harmonize column names between fortnightly and initial questionaire so we can merge
+-Fix dates
+-Check missing visitNs
+
+Intake questionaire
+
+```{r, echo=F}
+q0a <-  read_excel('./Data/confidential/SCOPE Intake questionnaire_September 24, 2021_11.57.xlsx', skip=1)
+q0a$`Date of Visit` <- parse_date_time(q0a$`Date of Visit`, orders=c('d-b-Y','d/b/Y','d-m-Y','m/d/Y','m/d/y','Y-m-d'))
+q0b <- read_excel('./Data/confidential/SCOPE Intake questionnaire_December 7, 2021_13.05.xlsx', skip=1)
+names(q0b) <- names(q0a)
+q0 <- q0a 
+select.colnames <- c('MRN', 
+            "SCOPE ID (eg. 0007, 0044, 0072 etc) if known/listed", 
+            "Date of Visit","Visit Location - Selected Choice",
+            "What is your date of birth? (DD-MM-YYYY)", 
+            "1.     Are you experiencing any of the following symptoms today?   - Q8#1 - Nasal congestion",
+            "1.     Are you experiencing any of the following symptoms today?   - Q8#1 - Coughing",
+            "1.     Are you experiencing any of the following symptoms today?   - Q8#1 - Running nose",
+            "1.     Are you experiencing any of the following symptoms today?   - Q8#1 - Sore throat", 
+            "1.     Are you experiencing any of the following symptoms today?   - Q8#1 - Fever", 
+            "1.    \nHave you had a positive test for COVID?",
+            "If\nyes, when did you have this positive test? (DD-MM-YYYY)",
+            "Have\nyou received the pneumonia vaccine?"  , 
+            "If yes,\nwhen did you receive this vaccine? (DD-MM-YYYY)",
+           "Have\nyou been hospitalized for pneumonia in the last month (30 days)?" , 
+           "Have\nyou taken any antibiotics in the last month (30 days)?",  
+           "Weight",
+           "Height (feet, inches)","
+           Gender - Selected Choice","What is your highest level of education?", 
+           "How would you describe your ethnicity? - Selected Choice"  ,
+           "What is the relationship between yourself and the person you are enrolling into the study with?", 
+           "How long have you been living together? - Years" ,
+           "How much time do you spend together each day? - ___ hours", 
+           "Have you received the flu shot this season?",
+           "Have you had any of the following symptoms in the past 2 weeks? - Q39#1 - Nasal congestion" ,
+          "Have you had any of the following symptoms in the past 2 weeks? - Q39#1 - Coughing",
+         "Have you had any of the following symptoms in the past 2 weeks? - Q39#1 - Running nose",
+         "Have you had any of the following symptoms in the past 2 weeks? - Q39#1 - Sore throat" ,
+         "Have you had any of the following symptoms in the past 2 weeks? - Q39#1 - Fever",
+         "Have you taken any medications for or been told by a health care provider that you have any of th... - Q40#1 - 1.\tImmunodeficiency (Examples include: HIV/AIDS, corticosteroid medication like “Prednisone”, medicine or therapy to treat a cancerous tumor or mass, have had your spleen removed or have chronic kidney disease)",
+         "Have you taken any medications for or been told by a health care provider that you have any of th... - Q40#1 - 2.\tDiabetes",
+         "Have you taken any medications for or been told by a health care provider that you have any of th... - Q40#1 - 5c. Chronic lung disease: Asthma",
+          "Do you currently smoke cigarettes or e-cigarrettes?",
+         "Do you have any regular contact with children?",
+         "What is the age range of the children you have had contact with? - Selected Choice" ,
+         "How often do you usually have contact with children?" ,
+         "How much contact per day do you have?",
+         "Time of sample collection:" 
+         )
+q0 <- q0[,c(which(names(q0) %in% select.colnames),grep('Are you experiencing any of the following symptoms today', names(q0)) )]
+q0b <- q0b[,c(which(names(q0b) %in% select.colnames),grep('Are you experiencing any of the following symptoms today', names(q0b)) )]
+rename.intake <- c('MRN','scope_id', 'visit_date','visit_location', 'dob','pos_covid_past', 'pos_covid_date', 'pneu_vax', 'pneu_vax_date','pneumonia_hosp', 'recent_abx', 'weight','height','education','ethnicity', 'hh_relationship', 'relationship_duration','hh_contact_time','flu_shot', 'recent_nasal', 'recent_cough', 'recent_runny_nose', 'recent_sore_throat', 'recent_fever','immuno_meds','diabetes_meds','asthma_meds', 'current_smoke', 'contact_children','age_child_contacts', 'frequency_child_contacts', 'time_day_child_contacts', 'time_sample', 'current_nasal','current_cough', 'current_runny_nose', 'current_sore_throat','current_fever', 'other_symp1','othr_symp2')
+names(q0) <- rename.intake
+names(q0b) <- rename.intake
+q0$visit_date[q0$visit_date %in% c( '12/APR/2021','12 Apr 2021','12/14/2021')] <- '2021-04-12'
+q0$visit_date_clean <- parse_date_time(q0$visit_date, orders=c('d-b-Y','d/b/Y','d-m-Y','m/d/Y','m/d/y','Y-m-d'))
+q0$visitN <- '1'
+q0b$visitN <- '1'
+q0b$MRN <- as.numeric(gsub('MR','',q0b$MRN))
+#which variables are characteristics of the person (not time varying)
+q0.baseline.vars <- c('dob','scope_id',"pos_covid_past","pos_covid_date","pneu_vax", "pneu_vax_date",'ethnicity','weight','height','education', "immuno_meds" ,"diabetes_meds", "asthma_meds","flu_shot","hh_relationship", "relationship_duration")
+```
+
+Fortnightly questionnaire  and  intake cleaning...do not run each time
+```{r}
+q1 <- read_excel('./Data/confidential/SCOPE Fortnightly Questionnaire_September 24, 2021_12.00_clean.xlsx', skip=1)
+
+orig.colnames <- names(q1)
+
+select.colnames.q1 <- c('MRN', "Fortnightly visit number:", "SCOPE ID if known/listed (eg. 0002, 0027, 0044, 0072...)", "Date of Visit", "Visit Location - Selected Choice","Have you taken part in any social activities or outings during the past two weeks?", "What sorts of activities have you participated in? - Selected Choice" , "Have you had any contact with children in the past two weeks?" , "If yes, what is the age range of the children you have had contact with? - Selected Choice","How often do you usually have contact with children?" , "How much contact per day do you have?", "Have you been tested for COVID in the last two weeks?" , "Have you had any sick visits to the doctor or been hospitalized in the last two weeks?" , "Have you received any new vaccines in the last two weeks? - Selected Choice"   ,"Time of sample collection:" ,'Have you taken any antibiotics in the last two weeks?' )
+
+rename.q1 <-c('MRN','scope_id', 'visit_date', 'visitN', 'visit_location','recent_social_activities','social_activity_type', 'contact_children','age_child_contacts', 'frequency_child_contacts', 'time_day_child_contacts','recent_covid_test', 'recent_doctor','recent_abx', 'recent_vaccines', 'sample_time', 'current_nasal','current_cough', 'current_runny_nose', 'current_sore_throat','current_fever', 'other_symp1','othr_symp2','recent_nasal', 'recent_cough', 'recent_runny_nose', 'recent_sore_throat', 'recent_fever' , 'recent_other_symp1','recent_other_symp2')
+```
+
+
+```{r, eval=F}
+q1 <- q1[,c(which(names(q1) %in% select.colnames.q1),grep('Which symptoms are you experiencing today', names(q1)),grep('Have you had any of the following symptoms', names(q1))  )]
+
+names(q1) <- rename.q1
+
+q1$visit_date_clean <- parse_date_time(q1$visit_date, orders=c('d-b-Y','d/b/Y','d-m-Y','d-m-y','m/d/Y','m/d/y','Y-m-d'))
+           
+q1$visit_date <- as.Date(q1$visit_date)
+q1 <- bind_rows(q0[,-which(names(q0) %in% q0.baseline.vars)], q1) #combine q0, q1
+q1$MRN <-  gsub("_visit#2.pdf","", q1$MRN )
+q1$MRN <-  gsub("MR","", q1$MRN )
+q1$MRN <-  gsub("mr","", q1$MRN )
+q1$MRN <-  as.numeric(q1$MRN)
+q1$visitN <- gsub('V','', q1$visitN)
+q1$visitN <- gsub('v','', q1$visitN)
+q1$visitN <- as.numeric(q1$visitN)
+
+#q1 <- merge(q1, q0[,c('MRN',q0.baseline.vars)], by='MRN', all=T)
+#Output file for manual cleanring, and read back in cleaned version
+write.csv(q1, './data/confidential/survey_data_to_clean.csv')
+```
+
+read in newly entered surveys
+
+```{r}
+q1b <- read_excel('./data/confidential/SCOPE Fortnightly Questionnaire_December 7, 2021_13.03.xlsx', skip=1)
+
+names(q1b) <- orig.colnames
+
+q1b <- q1b[,c(which(names(q1b) %in% select.colnames.q1),grep('Which symptoms are you experiencing today', names(q1b)),grep('Have you had any of the following symptoms', names(q1b))  )]
+
+names(q1b) <- rename.q1
+
+q1b$MRN <- as.numeric(q1b$MRN)
+
+q1b$visitN <- as.numeric(q1b$visitN)
+#q1b <- unique(q1b) #de-deuplicate
+
+q1b <- q1b %>%
+  group_by(MRN, visitN) %>%
+  mutate(repN=n()) %>%
+  ungroup()
+
+q1b <- q1b[q1b$repN==1,]
+```
+
+
+
+```{r}
+q2 <- read_excel('./data/confidential/survey_data_to_clean_DMW.xlsx')
+q2$visit_date <- as.Date(as.numeric(q2$visit_date), origin='1900-01-01')
+q2$visit_date_cleaned <- as.Date(as.numeric(q2$visit_date_cleaned), origin='1900-01-01')
+q2$visit_date <- q2$visit_date_cleaned
+  
+q0b$visitN <- as.numeric(q0b$visitN)
+q2 <- bind_rows(q2, q0b[,-which(names(q0b) %in% q0.baseline.vars)])
+q2 <- bind_rows(q2, q1b)
+q2$visit_date_cleaned <- q2$visit_date
+q2$MRN_cleaned[is.na(q2$MRN_cleaned)] <-
+  q2$MRN[is.na(q2$MRN_cleaned)]
+
+##Summary of which people are missing which days
+q2.m <- reshape2::melt(q2[, c('MRN_cleaned','visitN') ], id.vars=c('MRN_cleaned','visitN'))
+q2.c <- reshape2::dcast(q2.m, MRN_cleaned ~visitN, fun.aggregate = length)
+write.csv(q2.c,'./Data/confidential/MRN_surveys_missing.csv')
+q2 <- q2[,-which(names(q2) %in% q0.baseline.vars)] #baseline vars are messed up in merge
+q0$MRN <-  gsub("_visit#2.pdf","", q0$MRN )
+q0$MRN <-  gsub("MR","", q0$MRN )
+q0$MRN <-  gsub("mr","", q0$MRN )
+q0$MRN <-  as.numeric(q0$MRN)
+q2$MRN <-  gsub("MR","", q2$MRN )
+merge_key <- unique(q2[, c('MRN',  "MRN_cleaned" )])
+q0a <- merge(q0, merge_key, by='MRN', all=T)
+
+q3 <- merge(q2, q0a[,which(names(q0a) %in% c('MRN_cleaned',q0.baseline.vars))], by= "MRN_cleaned", all.x=T)
+
+q3 <- q3[q3$visitN %in% c(1,2,3,4,5,6),]
+
+q3$visit_date_cleaned <- as.Date(q3$visit_date_cleaned)
+q3$dob_clean <-  parse_date_time(q3$dob, orders=c('%m/%d/%Y', '%m/%d/%y', '%d/%m/%y','%d/%m/%y','%m-%d-%Y','%d-%m-%Y'))
+q3$dob_clean[q3$dob=='1945'] <- as.Date('1945-01-01')
+q3$dob_clean[q3$dob=='/1947'] <- as.Date('1947-01-01')
+q3$dob_clean <- as.Date(q3$dob_clean)
+q3$dob_clean <- q3$dob_clean - 100*365*(q3$dob_clean>=as.Date('2000-01-01')) #if DOB >year 2000, indicates problem with date
+q3$age <- round(as.numeric(q3$visit_date_cleaned - as.Date(q3$dob_clean))/365) #only recorded at t=1
+#View(q2[, c('visitN','dob_clean',"MRN..Clean.",'Visit_date..Clean.') ])
+key2$mr_clean <- gsub('MR', '',key2$`MR#`,)
+#This is tricky..on key 2 is minimally cleaned; should match with uncleaned MRN on q3
+
+q4 <- merge(q3, key2, by.x="MRN_cleaned", by.y= "mr_clean" , all.x=T)
+
+q4$flag_id <- is.na(q4$`ID Number`)
+age1 <- read_excel('./Data/confidential/AGE Scope Participants samples pick-up 06-15-2021.xlsx', skip=1)
+age1$MRN_cleaned <- gsub( 'MR', '',age1$`MR#`)
+age1 <- age1[,c('MRN_cleaned', 'AGE' )]
+
+q4 <- merge(q4, age1, by='MRN_cleaned', all.x=T)
+#View(q2[is.na(q2$age),])
+#miss.dob <- q0a[q0a$dob %in% c('N/A',"19-04-2021") | is.na(q0$dob), c('dob','MRN_cleaned','MRN') ]
+#write.csv(miss.dob,'./Data/confidential/check_dob.csv')
+```
+
+heat map of contacts
+
+```{r, fig.width=4, fig.height=8}
+##Summary of which people are missing which days
+q4.1 <- q4
+
+q4.1$child_contact_2_10y <- 0
+q4.1$child_contact_2_10y[grep('24-59 months', q4.1$age_child_contacts)] <- 1
+q4.1$child_contact_2_10y[grep('5-10 years', q4.1$age_child_contacts)] <- 1
+#q4.1$child_contact_2_10y[grep('13-23 months', q4.1$age_child_contacts)] <- 1
+#q4.1$child_contact_2_10y[grep('<12 months', q4.1$age_child_contacts)] <- 1
+
+q4.1$child_contact_2_10y[is.na(q4.1$age_child_contacts)] <- NA
+
+q4.m <- reshape2::melt(q4.1[, c('ID Number','visitN','child_contact_2_10y') ], id.vars=c('ID Number','visitN'))
+
+q2.c <- reshape2::dcast(q4.m, `ID Number` ~visitN, fun.aggregate = mean, fill=9999)
+names(q2.c)[1] <- 'ID'
+
+q2.c <- q2.c[!(q2.c$ID %in% c(38,39)),] #these IDs were not included in study
+
+q3.c <- merge(q2.c, key1, by.x='ID',by.y='id')
+
+heat.fun.contact()
+
+
+```
+
+```{r, echo=F}
+hist(q4$AGE, main='Distribution of ages', xlab='Age(y)')
+```
+
+```{r, echo=F}
+
+
+
+# master1$merge_id <- as.numeric(as.character(gsub('CS','',master1$dw_id_full)))
+# 
+# e1 <- merge(c1.c, master1, by.x='Sample', by.y='merge_id', all.x)
+# 
+# excel_date_diff <- as.numeric(as.Date("1970-01-01") - as.Date('1899-12-30')) #origin for excel and R is different
+# 
+# e1$`sample date`[e1$`sample date`=='2/15/25021'] <- as.character(as.numeric(as.Date('2021-02-15')) + excel_date_diff )
+# 
+# 
+# 
+# e1$pos <- 1*(e1$piab<40)
+# 
+# e1$sample_Date <- as.Date(as.numeric(e1$`sample date`), origin=as.Date('1899-12-30')) #use excel origin of 12-30-1899
+# 
+# hist(e1$sample_Date, breaks=10)
+# e1$part_id <- as.numeric(e1$number)
+# 
+# e2 <- merge(e1, key2, by.x='part_id', by.y="ID Number", all=T)
+# e2$`MR#` <- as.numeric(gsub("MR","", e2$`MR#`  ))
+
+
+##NEED TO FIX THIS MERGE--MR and visitN could be missing
+e3 <- merge(d1.ds, q4, by.x=c('ID','time'), by.y=c("ID Number",'visitN'), all=T)  
+
+
+e3$social_activity_type <- as.character(e3$social_activity_type)
+e3$social_activity_type[e3$recent_social_activities=='No'] <- 'No'
+
+e3$frequency_child_contacts <- as.character(e3$frequency_child_contacts)
+e3$frequency_child_contacts[e3$contact_children=='No'] <- 'No'
+
+e3$piab_pos <- NA
+e3$piab_pos[e3$piab >=40 & !is.na(e3$piab)] <- 0 
+e3$piab_pos[e3$piab <40 & !is.na(e3$piab)] <- 1 
+e3$piab_pos <- as.factor(e3$piab_pos)
+
+## export
+
+exp1 <- e3[,c('ID','time', 'age','education','ethnicity',"hh_relationship"  ,        "relationship_duration","pneu_vax" ,"pneu_vax_date" ,"weight", "height","pos_covid_past" ,          "pos_covid_date","current_smoke", "contact_children" ,       
+"age_child_contacts"  ,     "frequency_child_contacts" ,"time_day_child_contacts" )]
+
+write.csv(exp1,'./Data/Confidential/export_pfizer.csv')
+
+e3$month <- month(e3$visit_date_cleaned)
+
+e3$child_contact_u12m <- 'No'
+e3$child_contact_u12m[grep('<12 m', e3$age_child_contacts)] <- 'Yes'
+e3$child_contact_u12m[is.na(e3$age_child_contacts)] <- 'Not answered'
+
+e3$child_contact_u5y <- 'No'
+e3$child_contact_u5y[grep('<12 m', e3$age_child_contacts)] <- 'Yes'
+e3$child_contact_u5y[grep('13-23 mo', e3$age_child_contacts)] <- 'Yes'
+e3$child_contact_u5y[grep('24-59 months', e3$age_child_contacts)] <- 'Yes'
+e3$child_contact_u5y[is.na(e3$age_child_contacts)] <- 'Not answered'
+
+e3$child_contact_13_23m <- 'No'
+e3$child_contact_13_23m[grep('13-23 mo', e3$age_child_contacts)] <- 'Yes'
+e3$child_contact_13_23m[is.na(e3$age_child_contacts)] <- 'Not answered'
+
+e3$child_contact_24_59m <- 'No'
+e3$child_contact_24_59m[grep('24-59 months', e3$age_child_contacts)] <- 'Yes'
+e3$child_contact_24_59m[is.na(e3$age_child_contacts)] <- 'Not answered'
+
+e3$child_contact_5_10y <- 'No'
+e3$child_contact_5_10y[grep('5-10 years', e3$age_child_contacts)] <- 'Yes'
+e3$child_contact_5_10y[is.na(e3$age_child_contacts)] <- 'Not answered'
+
+e3$child_contact_over10y <- 'No'
+e3$child_contact_over10y[grep('>10 years', e3$age_child_contacts)] <-'Yes'
+e3$child_contact_over10y[is.na(e3$age_child_contacts)] <- 'Not answered'
+
+
+```
+
+Do you usually have contact with children?
+
+```{r, echo=F}
+table1(~piab_pos|`contact_children` , data= e3 )
+```
+
+Contact \<5 y olds
+
+```{r, echo=F}
+table1(~piab_pos|`child_contact_u5y` , data= e3 )
+```
+
+How often do you have contact with children?
+
+```{r, echo=F}
+table1(~piab_pos|frequency_child_contacts , data= e3 )
+
+```
+
+How much contact per day do you have?
+
+```{r, echo=F}
+table1(~piab_pos|`time_day_child_contacts` , data= e3 )
+
+```
+
+What ages do you have contact with?
+
+\<12m?
+
+```{r, echo=F}
+table1(~piab_pos|child_contact_u12m  , data= e3 )
+```
+
+12-23m?
+
+```{r, echo=F}
+table1(~piab_pos|child_contact_13_23m  , data= e3 )
+```
+
+2-5y
+
+```{r, echo=F}
+table1(~piab_pos|child_contact_24_59m  , data= e3 )
+```
+
+5-10y
+
+```{r, echo=F}
+table1(~piab_pos|child_contact_5_10y  , data= e3 )
+```
+
+more than 10y
+
+```{r, echo=F}
+table1(~piab_pos|child_contact_over10y   , data= e3 )
+```
+
+Have you taken part in any social activities or outings during the past two weeks?
+
+```{r, echo=F}
+#Need to fix this so that those not doing activities also represented
+
+table1(~piab_pos|recent_social_activities , data= e3 )
+
+```
+
+What sorts of activities have you participated in? - Selected Choice
+
+```{r,echo=F}
+#Need to fix this so that those not doing activities also represented
+
+table1(~piab_pos|social_activity_type , data= e3 )
+```
+
+## Current Symptoms
+
+Cough?
+
+```{r, echo=F}
+table1(~piab_pos|current_cough, data=e3 )
+```
+
+Runny Nose?
+
+```{r, echo=F}
+table1(~piab_pos|current_runny_nose, data= e3 )
+```
+
+Fever?
+
+```{r, echo=F}
+table1(~piab_pos|current_fever, data= e3 )
+```
+
+Sore throat?
+
+```{r, echo=F}
+table1(~piab_pos|current_sore_throat, data= e3 )
+```
+
+Nasal?
+
+```{r, echo=F}
+table1(~piab_pos|current_nasal, data= e3 )
+```
+
+## Pneumooccal vaccination
+
+```{r, echo=F}
+table1(~piab_pos|pneu_vax, data= e3 )
+```
+
+\#\#COVID History
+
+```{r, echo=F}
+table1(~piab_pos|pos_covid_past, data= e3 )
+
+```
+
+## Ethnicity
+
+```{r}
+table1(~piab_pos|ethnicity, data= e3 )
+```
+
+## Education level
+
+```{r, echo=F}
+#table1(~piab_pos|education, data= e3 )
+```
+
+\#Medications Immune meds
+
+```{r, echo=F}
+table1(~piab_pos|immuno_meds, data= e3 )
+```
+
+Asthma meds
+
+```{r, echo=F}
+table1(~piab_pos|asthma_meds, data= e3 )
+```
+
+Recent Antibiotics
+
+```{r, echo=F}
+table1(~piab_pos|recent_abx , data= e3 )
+
+```
+
+# Seasonality
+
+```{r, echo=F}
+table1(~piab_pos|month , data= e3 )
+```
+
+## Recent Vaccine receipt (note many missing)
+
+```{r, echo=F}
+table1(~piab_pos|recent_vaccines, data= e3 )
+
+```
+
+Simple model
+
+```{r}
+mod1 <- glm(piab_pos ~ child_contact_u12m+ child_contact_13_23m + child_contact_24_59m + child_contact_5_10y + child_contact_over10y, data=e3[e3$child_contact_13_23m!='Not answered',], family=binomial(link='logit'))
+summary(mod1)
+```
