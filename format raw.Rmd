@@ -30,6 +30,7 @@ library(table1)
 library(lubridate)
 library(patchwork)
 library(msm)
+library(gee)
 source('heat.fun.R')
 source('heat.fun.contact.R')
 
@@ -807,13 +808,34 @@ Simple model
 
 ```{r}
 mod1 <- glm(piab_pos ~ child_contact_u12m+ child_contact_13_23m + child_contact_24_59m + child_contact_5_10y + child_contact_over10y, data=e3[e3$child_contact_13_23m!='Not answered',], family=binomial(link='log'))
+
 summary(mod1)
 ```
+
+GEE to account for within-individual repeated sampling
+```{r}
+mod.df <- e3[e3$child_contact_13_23m!='Not answered',]
+
+mod1.gee <- gee(piab_pos ~ child_contact_u12m+ child_contact_13_23m + child_contact_24_59m + child_contact_5_10y + child_contact_over10y,id=mod.df$ID, data=mod.df, family=binomial(link='log'), corstr="exchangeable")
+
+summary(mod1.gee)
+
+coefs <-mod1.gee$coefficients
+coef.lcl <- coefs - 1.96 * sqrt(diag(mod1.gee$naive.variance))
+coef.ucl <- coefs + 1.96 * sqrt(diag(mod1.gee$naive.variance))
+
+plot(1:5,coefs[-1])
+arrows(1:5, y0=coef.lcl[-1], y1=coef.ucl[-1])
+
+```
+
 
 ```{r}
 mod1 <- glm(piab_pos ~  child_contact_24_59m , data=e3[e3$child_contact_13_23m!='Not answered',], family=binomial(link='log'))
 summary(mod1)
 ```
+
+
 
 There are some survey results missing. We lose information for these people. But we know their child contacts at other time points so can infer
 
@@ -858,12 +880,12 @@ l1$state[l1$piab_pos==1 & !is.na(l1$piab_pos)] <- 2
 
 
 q1 <- rbind(c( 0,0.01),
-           c(0.02,0)
+           c(0.01,0)
 )
 
 l1 <- l1[order(l1$ID, l1$day),]
 
-l2 <- l1[, c('state','child_contact_u5y','child_contact_13_23m',"child_contact_24_59m","child_contact_5_10y", 'ID','day')]
+l2 <- l1[, c('state','child_contact_u5y','child_contact_u12m','child_contact_13_23m',"child_contact_24_59m","child_contact_5_10y",'child_contact_over10y', 'ID','day')]
 l2$child_contactu5 =0 #neg or missing
 l2$child_contactu5[l2$child_contact_u5y=='Yes'] =1 #neg or missing
 
@@ -880,15 +902,20 @@ l2$child_5_10[  l2$child_contact_5_10y=='Yes'] <- 1
 msm.mod1 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2)
 msm.mod1
 
+msm.mod1a <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_contact_u12m))
+msm.mod1a
+
 msm.mod2 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_1_10))
 msm.mod2
 
 msm.mod3 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_2_10))
 msm.mod3
 
-msm.mod4 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_5_10))
+msm.mod4 <- msm( state ~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_5_10 ))
 msm.mod4
 
+msm.mod5 <- msm( state ~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_contact_over10y ))
+msm.mod5
 
 
 ```
