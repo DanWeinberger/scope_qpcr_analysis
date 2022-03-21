@@ -504,6 +504,9 @@ names(q2.c)[1] <- 'ID'
 q2.c <- q2.c[!(q2.c$ID %in% c(38,39)),] #these IDs were not included in study
 
 q3.c <- merge(q2.c, key1, by.x='ID',by.y='id')
+```
+
+```{r, fig.width=4, fig.height=8}
 
 heat.fun.contact()
 
@@ -639,16 +642,35 @@ e3$child_contact_over10y[is.na(e3$age_child_contacts) & e3$contact_children!='No
 
 ```
 
+Have you had COVID?
+```{r}
+
+table(e3$time, e3$pos_covid_past)
+
+unique(e3$ID[e3$pos_covid_past=='Yes, it was positive'])
+table(e3$pos_covid_date)
+
+
+
+```
+
+
 Do you usually have contact with children?
 
 ```{r, echo=F}
 table1(~piab_pos|`contact_children` , data= e3 )
+
+fisher.test(e3$piab_pos, e3$contact_children)
+
 ```
 
 Contact \<5 y olds
 
 ```{r, echo=F}
 table1(~piab_pos|`child_contact_u5y` , data= e3 )
+
+fisher.test(e3$piab_pos, e3$child_contact_u5y)
+
 ```
 
 How often do you have contact with children?
@@ -671,30 +693,52 @@ What ages do you have contact with?
 
 ```{r, echo=F}
 table1(~piab_pos|child_contact_u12m  , data= e3 )
+fisher.test(e3$piab_pos, e3$child_contact_u12m)
+```
+
+12-59m?
+
+```{r, echo=F}
+
+e3$child_contact_13_59m <- e3$child_contact_13_23m
+e3$child_contact_13_59m[e3$child_contact_24_59m=='Yes'] <- 'Yes'
+
+
+table1(~piab_pos|child_contact_13_59m  , data= e3 )
+fisher.test(e3$piab_pos, e3$child_contact_13_59m)
+
 ```
 
 12-23m?
 
 ```{r, echo=F}
 table1(~piab_pos|child_contact_13_23m  , data= e3 )
+fisher.test(e3$piab_pos, e3$child_contact_13_23m)
+
 ```
 
 2-5y
 
 ```{r, echo=F}
 table1(~piab_pos|child_contact_24_59m  , data= e3 )
+fisher.test(e3$piab_pos, e3$child_contact_24_59m)
+
 ```
 
 5-10y
 
 ```{r, echo=F}
 table1(~piab_pos|child_contact_5_10y  , data= e3 )
+
+fisher.test(e3$piab_pos, e3$child_contact_5_10y)
 ```
 
 more than 10y
 
 ```{r, echo=F}
 table1(~piab_pos|child_contact_over10y   , data= e3 )
+fisher.test(e3$piab_pos, e3$child_contact_over10y)
+
 ```
 
 Have you taken part in any social activities or outings during the past two weeks?
@@ -712,6 +756,47 @@ What sorts of activities have you participated in? - Selected Choice
 #Need to fix this so that those not doing activities also represented
 
 table1(~piab_pos|social_activity_type , data= e3 )
+
+#do it person-wise
+
+
+e3$soc_act_bin <- 0
+e3$soc_act_bin[e3$recent_social_activities=='No'] <- 0
+e3$soc_act_bin[e3$recent_social_activities=='Yes'] <- 1
+
+e3$soc_act_family_bin <- 0
+e3$soc_act_family_bin[e3$social_activity_type=='Activities with family'] <- 1
+
+
+e3$soc_act_friend_bin <- 0
+e3$soc_act_friend_bin[e3$social_activity_type=='Activities with friends'] <- 1
+
+
+e3$soc_act_comm_ctr_bin <- 0
+e3$soc_act_comm_ctr_bin[e3$social_activity_type=='Activities at community centers'] <- 1
+
+e3$soc_act_fitness_bin <- 0
+e3$soc_act_fitness_bin[e3$social_activity_type=='Fitness activities'] <- 1
+
+actitivity_sumamry <- e3 %>%
+  group_by(ID) %>%
+  summarize(soc_activity= max(soc_act_bin, na.rm=T) ,
+            soc_activity_family= max(soc_act_family_bin, na.rm=T) ,
+            soc_activity_friend= max(soc_act_friend_bin, na.rm=T) ,
+            soc_activity_comm_ctr= max(soc_act_comm_ctr_bin, na.rm=T) ,
+            soc_activity_fitness= max(soc_act_fitness_bin, na.rm=T) 
+            ) %>%
+  ungroup() %>%
+  summarize(freq_activity=mean(soc_activity, na.rm=T), N_activity=sum(soc_activity, na.rm=T),
+            freq_family=mean(soc_activity_family, na.rm=T),N_activity_family=sum(soc_activity_family, na.rm=T),
+            freq_friend=mean(soc_activity_friend, na.rm=T),N_activity_friends=sum(soc_activity_friend, na.rm=T),
+            freq_comm_ctr=mean(soc_activity_comm_ctr, na.rm=T),N_activity_comm_ctr=sum(soc_activity_comm_ctr, na.rm=T),    
+            freq_fitness=mean(soc_activity_fitness, na.rm=T),N_activity_fitness=sum(soc_activity_fitness, na.rm=T)    
+                             
+            )
+  
+actitivity_sumamry
+
 ```
 
 ## Current Symptoms
@@ -769,7 +854,11 @@ table1(~piab_pos|ethnicity, data= e3 )
 ## Education level
 
 ```{r, echo=F}
-#table1(~piab_pos|education, data= e3 )
+table1(~education, data= e3[e3$time==1,] ) #89/98 report some college
+```
+
+```{r, echo=F}
+table1(~ethnicity, data= e3[e3$time==1,] )
 ```
 
 ##Medications Immune meds
