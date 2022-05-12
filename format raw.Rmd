@@ -44,6 +44,18 @@ ID 62.2,63.2 samples were picked up 1 month after .We didn't see any growth afte
 
 ID 20.5 - 21.5 to verify
 
+
+What to do if we have borderline positive then negative test:
+
+1) If weak positive for piaB (e.g., 35 Ct or higher) AND at least one of the repeats is \<40, then it is positive
+
+2) If weak positive for piaB (e.g., 35 Ct or higher), AND (2 repeats negative) then NEGATIVE
+
+3) if weak positive for piaB and then negative on 1 repeat performed and negative, then negative
+
+4) If posivi, take ave of Ct among those \<40
+
+
 ```{r, echo=F}
  key1 <- read.csv('./Data/hh_id_key.csv')
 
@@ -95,6 +107,7 @@ b1$Target <- gsub(' ' ,'', b1$Target, fixed=T)
 b1$Target <- tolower(b1$Target)
 
 b1$Target[grep('lyta',b1$Target)] <- 'lyta'
+
 b1$Target[grep('piab',b1$Target)] <- 'piab'
 
 
@@ -112,17 +125,33 @@ c1$Cq[is.na(c1$Cq)] <- 45
 
 c1.m <- reshape2::melt(c1, id.vars= c('Sample','Target','plate'))
 
-##If sample tested multiple times call pos if pos on multiple runs
+##If sample tested multiple times call pos if pos on multiple runs. Ct<40=pos
 
 c1.m <- c1.m %>%
   group_by(Sample, Target) %>%
-  mutate(N_tests= n(), n_pos=sum(value<45), ct_pos=mean(value[value<45], na.rm=T) ) %>%
+  mutate(N_tests= n(), n_pos=sum(value<40), ct_pos=mean(value[value<40], na.rm=T), ct_min=min(value, na.rm=T) ) %>%
   ungroup() 
+
+#if negative, set ct to 45
+c1.m$ct_pos[is.nan(c1.m$ct_pos)] <- 45
 
 c1.m$ct_pos2 <- c1.m$ct_pos
 
-c1.m$ct_pos2[c1.m$N_tests>1 & c1.m$n_pos<=1] <- 45
-c1.m$ct_pos2[is.nan(c1.m$ct_pos)] <- 45
+#If min Ct value<35, use ave value of positive regardless of number of tests performed.
+c1.m$ct_pos2[c1.m$ct_min <= 35] <- c1.m$ct_pos[c1.m$ct_min <= 35] #if ave is <35, call positive regardless of N tests
+
+#If min Ct>35, and 3 or more tests performed, with only 1 positive, call it a negative
+c1.m$ct_pos2[c1.m$N_tests>=3 & c1.m$n_pos<=1 & c1.m$ct_min > 35] <- 45 #if 3 or more tests, and 0 or 1 are weakly positive or neg, then call it negative
+
+#If min >35, with at least 2 tests performed and at least 2 were positive, call it positive
+c1.m$ct_pos2[c1.m$N_tests>=2 & c1.m$n_pos>= 2 & c1.m$ct_min > 35] <- 
+  c1.m$ct_pos[c1.m$N_tests>=2 & c1.m$n_pos>= 2 & c1.m$ct_min > 35] #if 3 or more tests, and 0 or 1 are weakly positive or neg, then call it negative
+
+#if min Ct>35, N tests is <=2 and only 1 positive, call it negative
+c1.m$ct_pos2[c1.m$N_tests<=2 & c1.m$n_pos<=1 & c1.m$ct_min > 35] <- c1.m$ct_pos2[c1.m$N_tests<=2 & c1.m$n_pos<=1 & c1.m$ct_min > 35] #if 2 or fewer tests, and at least 1 is positive, call positive
+
+
+
 
 c1.c <- reshape2::dcast(c1.m[,c('Sample','variable','Target','ct_pos2')], Sample +variable ~ Target, fun.aggregate = min, fill=9999, value.var='ct_pos2')
 
@@ -152,12 +181,12 @@ c1.m <- merge(c1.m, key1, by.x='ID',by.y='id', all.x=T)
 
 c1.m <- c1.m[!(c1.m$ID %in% c(38,39, 48,49, 58, 59)),]
 
-d1 <- dcast(c1.m[,c('ID','Target','time','value')],  ID +Target ~ time, fun.aggregate = min, na.rm=T, fill=9999)
+d1 <- dcast(c1.m[,c('ID','Target','time','ct_pos2')],  ID +Target ~ time, fun.aggregate = min, na.rm=T, fill=9999, value.var = 'ct_pos2')
 
 
 write.csv(d1, './Data/Result1.csv')
 
-d1.alt <- dcast(c1.m[,c('ID','Target','time','value')],  ID +time~ Target, fun.aggregate = min, na.rm=T, fill=9999)
+d1.alt <- dcast(c1.m[,c('ID','Target','time','ct_pos2')],  ID +time~ Target, fun.aggregate = min, na.rm=T, fill=9999, value.var = 'ct_pos2')
 
 d1.alt <- d1.alt[!(d1.alt$ID %in% c(38,39, 48, 49)),] #these IDs were not included in study
 
@@ -165,9 +194,9 @@ write.csv(d1.alt, './Data/Result2.csv') #Anne's preferred format
 
 c1.m <- c1.m[!(c1.m$ID %in% c(38,39)),] #these IDs were not included in study
 
-d1.a <- acast(c1.m[,c('ID','Target','time','value','Household')], Target ~ ID +Household ~ time, fun.aggregate=min, na.rm=T, fill=9999)
+d1.a <- acast(c1.m[,c('ID','Target','time','ct_pos2','Household')], Target ~ ID +Household ~ time, fun.aggregate=min, na.rm=T, fill=9999, value.var = 'ct_pos2')
 
-d1.ds <- reshape2::dcast(c1.m[,c('ID','Target','time','value','Household')],   Household +ID+ time ~ Target, fun.aggregate=min, na.rm=T, fill=9999)
+d1.ds <- reshape2::dcast(c1.m[,c('ID','Target','time','ct_pos2','Household')],   Household +ID+ time ~ Target, fun.aggregate=min, na.rm=T, fill=9999, value.var = 'ct_pos2')
 
 
 ```
@@ -193,17 +222,18 @@ Contacts
 ## Summary stats
 
 ```{r}
-c1.m.m <- melt(c1.m[,c('Target','ID','Sample','value','Household') ],
+c1.m.m <- melt(c1.m[,c('Target','ID','Sample','ct_pos2','Household') ],
                      id.vars=c('Target','ID','Sample','Household')) 
                      
 c1.m.c <- dcast(c1.m.m, ID + Household + Sample  ~Target, fun.aggregate = min, fill=999)
 
 #N people
-length(unique(c1.m.c$ID))
+N.id <- length(unique(c1.m.c$ID))
+N.id
 
 #N households
-length(unique(c1.m.c$Household))
-
+N.hh<- length(unique(c1.m.c$Household))
+N.hh
 
 
 
@@ -229,18 +259,20 @@ sum(c1.m.c$lyta<40 )/nrow(c1.m.c)
 
 #Count N people with piaB positives by IDs
 c1.m.spl.id <- split(c1.m.c, c1.m.c$ID)
-sum(sapply(c1.m.spl.id, function(x){
+N_pos_people <- sum(sapply(c1.m.spl.id, function(x){
   min(x$piab) <40 
 }
   ))
+N_pos_people
+N_pos_people/N.id
 
 #Count N HH with piab positives by IDs
 c1.m.spl.id <- split(c1.m.c, c1.m.c$Household)
-sum(sapply(c1.m.spl.id, function(x){
+n_pos_hh <- sum(sapply(c1.m.spl.id, function(x){
   min(x$piab) <40 
 }
   ))
-
+n_pos_hh/N.hh
 
 ## Ave age
 age1 <- read_excel('./Data/confidential/AGE Scope Participants samples pick-up 06-15-2021.xlsx', skip=1)
@@ -915,6 +947,7 @@ coef.ucl <- coefs + 1.96 * sqrt(diag(mod1.gee$naive.variance))
 
 plot(1:5,coefs[-1])
 arrows(1:5, y0=coef.lcl[-1], y1=coef.ucl[-1])
+abline(h=0)
 
 ```
 
