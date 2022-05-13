@@ -1,0 +1,194 @@
+---
+title: "Serotyping algorithm"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(readxl)
+library(dplyr)
+library(stringr)
+library(reshape2)
+```
+
+The goal of this analysis is to rank serotypes based on Pneumostrip or qPCR serotyping data. This is a fairly straightforward application of Bayes' Rule. We need 3 quantities: A) Sensitivity of the serotyping assay (we could assume this is 100% for molecular methods, or if we have data on the value if it is lower, we can use that.  B) False positive rate for the serotype. This can be obtained from the tests run on negative samples (ideally would be run for individual samples rather than pools) C) The 'true' prevalence of the serotype. This is not known, but we can make a guess based on either how common the serotype is among pediatric carriers  (from literature) or based on serotype-specific adult IPD rates divided by case carrier ratio. 
+
+Once we have these 3 quantities, it is simple arithmetic, probability of samples being a true positive for a serotype if it tests positive is: (A*C)/(A*C + (1-C)*B). If false positive rate is 0, then this quantity approaches 1. If false positive rate approach 1, this quantity approaches (C), which is our prior--basically saying if you have very high false positivity, your test doesn't tell you anything, and you just default to your prior expectation of prevalence 
+
+US IPD data
+```{r}
+a1 <- read_excel('./Data/confidential/IPD serotype data 2014_2018.xls')
+
+a1$serotype <- str_remove(a1$serotype, "^0+") 
+
+a1 <- a1[a1$`Age Group` %in% c('50-64', '65+'),]
+
+a1$serotype[a1$serotype %in% c('15B','15C')] <- '15B/C'
+
+a1$serotype[a1$serotype %in% c('6A','6C')] <- '6A/C'
+
+a1$serotype[a1$serotype %in% c('35F/47F')] <- '35F'
+
+a1$serotype[a1$serotype %in% c('15A/F')] <- '15A'
+
+a1$serotype[a1$serotype %in% c('24F')] <- '24A/B/F'
+
+
+
+a2 <- a1 %>%
+  group_by(serotype) %>%
+  summarize('N_IPD'=n())
+
+```
+
+invasiveness data (from Navajo paper)
+```{r}
+inv1 <- read.csv('https://raw.githubusercontent.com/weinbergerlab/Invasiveness_Navajo/main/Results/mcmc_invasive_single_stage.csv')
+
+inv1 <- inv1[, c('st','log.inv.age1')]
+```
+
+Merge invasiveness and IPD, fill in the gaps
+```{r}
+b1 <- merge(a2, inv1, by.x='serotype', by.y='st', all=T)
+
+b1$log.inv.age1[is.na(b1$log.inv.age1)] <-  mean(inv1$log.inv.age1) #if missing, assign the mean
+
+b1$N_IPD[is.na(b1$N_IPD)] <- 0.5
+```
+
+## Estimate prevalence (C)
+```{r}
+
+b1$invasiveness <- exp(b1$log.inv.age1)
+
+b1$carr_est <- b1$N_IPD / b1$invasiveness/10000
+
+b1$carr_prop <- b1$carr_est/sum(b1$carr_est)
+```
+
+setup to merge with pneumostrip
+```{r}
+b1$st_merge <- b1$serotype
+
+b1$st_merge[b1$serotype %in% c('10A','10F','10B','10C')] <- '10A/B/F/C'
+
+b1$st_merge[b1$serotype %in% c('11A','11D','11B','11C', '11F')] <- '11A/D/B/C/F'
+
+b1$st_merge[b1$serotype %in% c('12A','46','12F','12B', '44')] <- '12A/46/B/F/44'
+
+b1$st_merge[b1$serotype %in% c('15A','15F')] <- '15A/F'
+
+b1$st_merge[b1$serotype %in% c('15B','15C')] <- '15B/C'
+
+b1$st_merge[b1$serotype %in% c('18A','18B', '18C', '18F')] <- '18A/B/C/F'
+
+b1$st_merge[b1$serotype %in% c('19A', '19F')] <- '19A/F'
+
+b1$st_merge[b1$serotype %in% c('19B', '19C')] <- '19B/C'
+
+b1$st_merge[b1$serotype %in% c('22F', '22A')] <- '22F/A'
+
+b1$st_merge[b1$serotype %in% c('23B', '23F')] <- '23B/F'
+
+b1$st_merge[b1$serotype %in% c('24A', '24B', '24F')] <- '24A/B/F'
+
+b1$st_merge[b1$serotype %in% c('25A', '25F')] <- '25A/F'
+
+b1$st_merge[b1$serotype %in% c('32A','32F')] <- '32A/F'
+
+b1$st_merge[b1$serotype %in% c('33B','33D','33C')] <- '33B/D/C'
+
+b1$st_merge[b1$serotype %in% c('33F','33A')] <- '33F/A'
+
+b1$st_merge[b1$serotype %in% c('35A','35C','35F','47F')] <- '35A/C/F/47F'
+
+b1$st_merge[b1$serotype %in% c('6A','6C','6D', '6A/C')] <- '6A/C/D'
+
+b1$st_merge[b1$serotype %in% c('7B','7C','40')] <- '7B/C/40'
+
+b1$st_merge[b1$serotype %in% c('7F','7A')] <- '7F/A'
+
+b1$st_merge[b1$serotype %in% c('9A','9V')] <- '9A/V'
+
+b1$st_merge[b1$serotype %in% c('9N','9L')] <- '9N/L'
+
+
+
+
+
+```
+
+
+## False positivity (B)
+Based on false positivity among lytA positive samples
+```{r}
+
+#ps1 <- read_excel('https://github.com/DanWeinberger/pneumostrip_testing/blob/master/Data/ps_data_updated.xlsx?raw=true')
+
+ps1 <- read_excel('./Data/pneumostrip_negatives/ps_data_updated.xlsx')
+
+
+ps1.m <- reshape2::melt(ps1, id.vars=c('Pool','lytA_pos_pool'))
+ps1.m$value <- factor(ps1.m$value, levels=c(0,1,2,3,4))
+
+ps1.m <- ps1.m[!is.na(ps1.m$Pool),]
+ps1.m$poolname <- paste(ps1.m$lytA_pos_pool, ps1.m$Pool, sep='_')
+
+ps1.m$pos_pneumostrip <- 0
+ps1.m$pos_pneumostrip[ps1.m$value %in% c('1','2','4')] <- 1
+
+
+fpr_lyta_pos <- ps1.m[ps1.m$lytA_pos_pool==1,] %>%
+  group_by(variable) %>%
+  summarize('fpr_lyta_pos'=mean(pos_pneumostrip))
+
+fpr_lyta_neg <- ps1.m[ps1.m$lytA_pos_pool==0,] %>%
+  group_by(variable) %>%
+  summarize('fpr_lyta_neg'=mean(pos_pneumostrip))
+
+fpr <- merge(fpr_lyta_pos, fpr_lyta_neg, by='variable',all=T)
+
+plot(fpr$fpr_lyta_pos, fpr$fpr_lyta_neg, xlim=c(0,1), ylim=c(0,1))
+abline(a=0, b=1)
+
+fpr$fpr_any <- (fpr$fpr_lyta_pos + fpr$fpr_lyta_neg)/2
+
+```
+
+```{r}
+c1 <- merge(b1, fpr, by.x='st_merge', by.y='variable', all=T)
+
+c1 <- c1[,c('st_merge','serotype','fpr_any','carr_prop')]
+
+c1$carr_prop[is.na(c1$carr_prop)] <- min(c1$carr_prop, na.rm=T)
+```
+
+Probability of positive if detected
+
+Sensitivity (A)
+False positivity (B)
+Estimate prevalence (C)
+```{r}
+A=1
+
+c1$probability_pos <- (A*c1$carr_prop) /((A*c1$carr_prop) + (1-c1$carr_prop)*c1$fpr_any )
+
+
+res1 <- c1[,c('st_merge','serotype','probability_pos')]
+
+res1 <- res1[order(-res1$probability_pos),]
+
+res1$serotype[is.na(res1$serotype)] <- res1$st_merge[is.na(res1$serotype)]
+
+write.csv(res1, './Data/pneumostrip_ranking.csv')
+```
+
+
+
+
+
+
+
+
