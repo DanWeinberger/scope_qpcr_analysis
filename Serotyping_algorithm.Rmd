@@ -104,7 +104,7 @@ b1$st_merge[b1$serotype %in% c('33F','33A')] <- '33F/A'
 
 b1$st_merge[b1$serotype %in% c('35A','35C','35F','47F')] <- '35A/C/F/47F'
 
-b1$st_merge[b1$serotype %in% c('6A','6C','6D', '6A/C')] <- '6A/C/D'
+b1$st_merge[b1$serotype %in% c('6A','6C','6D','6B', '6A/C')] <- '6A/C/D'
 
 b1$st_merge[b1$serotype %in% c('7B','7C','40')] <- '7B/C/40'
 
