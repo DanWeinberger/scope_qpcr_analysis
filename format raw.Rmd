@@ -57,7 +57,7 @@ What to do if we have borderline positive then negative test:
 
 
 ```{r, echo=F}
- key1 <- read.csv('./Data/hh_id_key.csv')
+ key1a <- read.csv('./Data/hh_id_key.csv')
 
 master1 <- read_excel('./Data/confidential/SCOPE_Master_20210108.xlsx', sheet='COM SAL')
 
@@ -65,12 +65,15 @@ master1 <- read_excel('./Data/confidential/SCOPE_Master_20210108.xlsx', sheet='C
 key2 <- read_excel('./Data/confidential/SCOPE Participant MRN and ID.xlsx', skip=1)
 key3 <- cbind.data.frame('id'=c(100:101) , 'Household'=c(51,51) )
 
+key4a <- bind_rows(key1a,key3)
 
-key1 <- bind_rows(key1,key3)
+key4a$id <- paste0('S1_', key4a$id)
+key4a$Household <- paste0('S1_', key4a$Household) #SEASON 1 key
+
 
 file_list <- list.files(path="./Data/Final Scope Results Drift Correction")
   
- all.res <-
+ all.res.season1 <-
    lapply(file_list, function(x){
      print(x)
      ds <- read_excel(paste0("./Data/Final Scope Results Drift Correction/",x), skip=19)
@@ -83,10 +86,33 @@ file_list <- list.files(path="./Data/Final Scope Results Drift Correction")
      ds.names <- names(ds)
      ds.names <- intersect(ds.names,cols.keep)
     ds <- ds[,ds.names]
+      ds$Sample <- paste0('S1_', ds$Sample)
+
      return(ds)
    })
  
+ file_list_s2 <- list.files(path="./Data/cleaned_season2")
 
+  all.res.season2 <-
+   lapply(file_list_s2, function(x){
+     print(x)
+     ds <- read_excel(paste0("./Data/cleaned_season2/",x), skip=19)
+     ds$expt <- substr(x,1,4)
+     ds$Sample <- as.character(ds$Sample)
+     ds$Target <- as.character(ds$Target)
+     ds$Cq <- as.numeric(as.character(ds$Cq))
+     cols.keep <- 
+       c('Cq','Sample','Target','Content','expt','Biological Set Name')
+     ds.names <- names(ds)
+     ds.names <- intersect(ds.names,cols.keep)
+    ds <- ds[,ds.names]
+    ds$`Biological Set Name` <- NA
+    ds$Sample <- paste0('S2_', ds$Sample)
+     return(ds)
+   })
+ 
+all.res <- c( all.res.season1,all.res.season2)
+  
 all.res <- lapply(1:length(all.res), function(x){ all.res[[x]]$plate= x 
 return(all.res[[x]])
 }) 
@@ -113,11 +139,27 @@ b1$Target[grep('piab',b1$Target)] <- 'piab'
 
 #b1$Sample[is.na(b1$Sample)] <- b1$`sample id`[is.na(b1$Sample)]
 
-b1 <-b1[!is.na(b1$Sample),]
+b1 <- b1[!is.na(b1$Sample),]
 
-b1$Sample <- round(as.numeric(b1$Sample),1)
+b1 <- b1[-grep('neg',b1$Sample),]
+b1 <- b1[-grep('NA',b1$Sample),]
+b1 <- b1[-grep('NTC',b1$Sample),]
+b1 <- b1[-grep('NEG',b1$Sample),]
+b1 <- b1[-grep('NEC',b1$Sample),]
+b1 <- b1[-grep('nec',b1$Sample),]
+b1 <- b1[-grep('ntc',b1$Sample),]
+b1 <- b1[-grep('apex',b1$Sample),]
 
-b1 <- b1[b1$Sample>0 & !is.na(b1$Sample),]
+b1 <- b1[-grep('-1',b1$Sample),]
+b1 <- b1[-grep('-2',b1$Sample),]
+b1 <- b1[-grep('-3',b1$Sample),]
+b1 <- b1[-grep('-4',b1$Sample),]
+b1 <- b1[-grep('-5',b1$Sample),]
+b1 <- b1[-grep('QC',b1$Sample),]
+
+b1$Sample <- gsub('rep','',b1$Sample)
+
+#b1$Sample <- round(as.numeric(b1$Sample),1)
 
 c1 <- b1[, c('Sample','Cq','Target','plate')]
 
@@ -157,9 +199,20 @@ c1.c <- reshape2::dcast(c1.m[,c('Sample','variable','Target','ct_pos2')], Sample
 
 c1.c$pos <- c1.c$lyta<40 & c1.c$piab<40
 
-write.csv(c1.c, './Data/cleaned_file.csv')
+write.csv(c1.c, './Data/cleaned_file_s2.csv')
 
 
+all.ids <- unique(c1.c$Sample)
+all.ids <- all.ids[substr(all.ids,1,2)=='S2']
+all.ids <- gsub(".*_","",all.ids)
+all.ids <- sub('\\..*', '', all.ids)
+all.ids <- sort(as.numeric(as.character(unique(all.ids))))
+
+key4b <- cbind.data.frame('id'=all.ids ,'Household'=rep(1:(length(all.ids)/2),each=2) )      
+key4b$id <- paste0('S2_', key4b$id)
+key4b$Household <- paste0('S2_', key4b$Household) #SEASON 1 key
+
+key1ab <- bind_rows(key4a, key4b)
 
 ```
 
@@ -172,32 +225,41 @@ abline(h=40, v=40, col='gray', lty=2)
 ```{r, echo=F}
 
 c1.m$ID <- sub("\\.[0-9]+$", "", c1.m$Sample)
-c1.m$ID <- as.numeric(as.character(c1.m$ID))
-c1.m$time <- sub('.*\\.', '', c1.m$Sample)
+
+c1.m$time_1a <- sub('.*\\.', '', c1.m$Sample)
+c1.m$time_2a <- as.numeric(substr(c1.m$time_1a,1,1)) 
+c1.m$time_2b <- as.numeric(substr(c1.m$time_1a,2,2))
+c1.m$time_2b[is.na(c1.m$time_2b)] <- 0
+c1.m$time <- round(c1.m$time_2a + c1.m$time_2b/10)
 
 c1.m <- c1.m[order(c1.m$ID, c1.m$time),]
 
-c1.m <- merge(c1.m, key1, by.x='ID',by.y='id', all.x=T)
+c1.m <- merge(c1.m, key1ab, by.x='ID',by.y='id', all.x=T)
 
-c1.m <- c1.m[!(c1.m$ID %in% c(38,39, 48,49, 58, 59)),]
+c1.m <- c1.m[!(c1.m$ID %in% c('S1_38','S1_39', 'S1_48','S1_49', 'S1_58', 'S1_59')),]
 
 d1 <- dcast(c1.m[,c('ID','Target','time','ct_pos2')],  ID +Target ~ time, fun.aggregate = min, na.rm=T, fill=9999, value.var = 'ct_pos2')
 
 
-write.csv(d1, './Data/Result1.csv')
+write.csv(d1, './Data/Result1_S2.csv')
 
 d1.alt <- dcast(c1.m[,c('ID','Target','time','ct_pos2')],  ID +time~ Target, fun.aggregate = min, na.rm=T, fill=9999, value.var = 'ct_pos2')
 
-d1.alt <- d1.alt[!(d1.alt$ID %in% c(38,39, 48, 49)),] #these IDs were not included in study
+d1.alt <- d1.alt[!(d1.alt$ID %in% c('S1_38','S1_39', 'S1_48','S1_49', 'S1_58', 'S1_59')),] #these IDs were not included in study
 
-write.csv(d1.alt, './Data/Result2.csv') #Anne's preferred format
+write.csv(d1.alt, './Data/Result2_S2.csv') #Anne's preferred format
 
-c1.m <- c1.m[!(c1.m$ID %in% c(38,39)),] #these IDs were not included in study
+c1.m <- c1.m[!(c1.m$ID %in% c('S1_38','S1_39', 'S1_48','S1_49', 'S1_58', 'S1_59')),] #these IDs were not included in study
 
 d1.a <- acast(c1.m[,c('ID','Target','time','ct_pos2','Household')], Target ~ ID +Household ~ time, fun.aggregate=min, na.rm=T, fill=9999, value.var = 'ct_pos2')
 
 d1.ds <- reshape2::dcast(c1.m[,c('ID','Target','time','ct_pos2','Household')],   Household +ID+ time ~ Target, fun.aggregate=min, na.rm=T, fill=9999, value.var = 'ct_pos2')
 
+d1.ds <- d1.ds %>%
+  group_by(Household ,time) %>%
+  arrange(ID) %>%
+  mutate(HH_order=row_number() ) %>%
+  ungroup()
 
 ```
 
@@ -207,6 +269,23 @@ piaB
 
 ```{r, fig.width=4, fig.height=8}
 piab.plot <- heat.fun(target='piab')
+
+breakslist<-seq(15,45,by=1)
+
+cols1 <- colorRampPalette(c('red4','red','darkorange','orange','gold','lightgoldenrod1','white','white'))(length(breakslist))
+
+p1 <- ggplot(d1.ds, aes(time, HH_order, fill= piab)) +
+  geom_tile() +
+  scale_fill_viridis_c(option = "B", direction = -1) +
+
+  theme_classic()+
+  ylab('Serotype tested')+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  facet_wrap(~Household, ncol=3)+
+  theme(
+  strip.text.x = element_blank()
+)
+p1
 ```
 
 lytA
@@ -272,6 +351,7 @@ n_pos_hh <- sum(sapply(c1.m.spl.id, function(x){
   min(x$piab) <40 
 }
   ))
+n_pos_hh
 n_pos_hh/N.hh
 
 ## Ave age
@@ -771,6 +851,20 @@ more than 10y
 table1(~piab_pos|child_contact_over10y   , data= e3 )
 fisher.test(e3$piab_pos, e3$child_contact_over10y)
 
+```
+
+
+2-10years
+
+```{r}
+e3$child_contact_2_10y <- NA
+e3$child_contact_2_10y[e3$child_contact_24_59m=='No' & e3$child_contact_5_10y=='No'] <- 'No' 
+e3$child_contact_2_10y[e3$child_contact_24_59m=='Yes' | e3$child_contact_5_10y=='Yes'] <- 'Yes' 
+e3$child_contact_2_10y[e3$child_contact_24_59m=='Not answered' & e3$child_contact_5_10y=='Not answered'] <- 'Not answered'
+
+
+table1(~piab_pos|child_contact_2_10y   , data= e3 )
+fisher.test(e3$piab_pos, e3$child_contact_2_10y)
 ```
 
 Have you taken part in any social activities or outings during the past two weeks?
