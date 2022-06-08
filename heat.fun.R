@@ -5,7 +5,7 @@ ds1[ds1==9999] <- NA
 
 breakslist<-seq(cut1,cut2,by=1)
 
-weeks<- paste0('Week ', 1:6) 
+weeks<- paste0('Week ', c(0,2,4,6,8,10)) 
 
 house <- as.numeric(word(dimnames(ds1)[[1]], 2, sep = "_"))
 sampleID <- as.numeric(word(dimnames(ds1)[[1]], 1, sep = "_"))
