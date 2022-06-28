@@ -270,22 +270,22 @@ piaB
 ```{r, fig.width=4, fig.height=8}
 piab.plot <- heat.fun(target='piab')
 
-breakslist<-seq(15,45,by=1)
-
-cols1 <- colorRampPalette(c('red4','red','darkorange','orange','gold','lightgoldenrod1','white','white'))(length(breakslist))
-
-p1 <- ggplot(d1.ds, aes(time, HH_order, fill= piab)) +
-  geom_tile() +
-  scale_fill_viridis_c(option = "B", direction = -1) +
-
-  theme_classic()+
-  ylab('Serotype tested')+
-   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-  facet_wrap(~Household, ncol=3)+
-  theme(
-  strip.text.x = element_blank()
-)
-p1
+# breakslist<-seq(15,45,by=1)
+# 
+# cols1 <- colorRampPalette(c('red4','red','darkorange','orange','gold','lightgoldenrod1','white','white'))(length(breakslist))
+# 
+# p1 <- ggplot(d1.ds, aes(time, HH_order, fill= piab)) +
+#   geom_tile() +
+#   scale_fill_viridis_c(option = "B", direction = -1) +
+# 
+#   theme_classic()+
+#   ylab('Serotype tested')+
+#    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+#   facet_wrap(~Household, ncol=3)+
+#   theme(
+#   strip.text.x = element_blank()
+# )
+# p1
 ```
 
 lytA
@@ -589,6 +589,8 @@ q4 <- q4[q4$repN==1,]
 q4 <- q4[!(q4$`ID Number`  %in% c(38,39, 48,49, 58, 59, 102, 103)),]
 q4 <- q4[!(q4$`ID Number`==6 & q4$visitN==1),]
 
+q4$ID <- paste0('S1_', q4$`ID Number`)
+
 #View(q2[is.na(q2$age),])
 #miss.dob <- q0a[q0a$dob %in% c('N/A',"19-04-2021") | is.na(q0$dob), c('dob','MRN_cleaned','MRN') ]
 #write.csv(miss.dob,'./Data/confidential/check_dob.csv')
@@ -608,14 +610,14 @@ q4.1$child_contact_2_10y[grep('5-10 years', q4.1$age_child_contacts)] <- 1
 
 q4.1$child_contact_2_10y[is.na(q4.1$age_child_contacts)] <- NA
 
-q4.m <- reshape2::melt(q4.1[, c('ID Number','visitN','child_contact_2_10y') ], id.vars=c('ID Number','visitN'))
+q4.m <- reshape2::melt(q4.1[, c('ID','visitN','child_contact_2_10y') ], id.vars=c('ID','visitN'))
 
-q2.c <- reshape2::dcast(q4.m, `ID Number` ~visitN, fun.aggregate = mean, fill=9999)
+q2.c <- reshape2::dcast(q4.m, `ID` ~visitN, fun.aggregate = mean, fill=9999)
 names(q2.c)[1] <- 'ID'
 
 q2.c <- q2.c[!(q2.c$ID %in% c(38,39)),] #these IDs were not included in study
 
-q3.c <- merge(q2.c, key1, by.x='ID',by.y='id')
+q3.c <- merge(q2.c, key1ab, by.x='ID',by.y='id')
 ```
 
 ```{r, fig.width=4, fig.height=8}
@@ -655,7 +657,7 @@ hist(age1$AGE, main='Distribution of ages', xlab='Age(y)')
 
 
 ##NEED TO FIX THIS MERGE--MR and visitN could be missing
-e3 <- merge(d1.ds, q4, by.x=c('ID','time'), by.y=c("ID Number",'visitN'), all=T)  
+e3 <- merge(d1.ds, q4, by.x=c('ID','time'), by.y=c("ID",'visitN'), all=T)  
 
 
 e3$social_activity_type <- as.character(e3$social_activity_type)
