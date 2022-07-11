@@ -187,10 +187,10 @@ c1.m$ct_pos2[c1.m$N_tests>=3 & c1.m$n_pos<=1 & c1.m$ct_min > 35] <- 45 #if 3 or 
 
 #If min >35, with at least 2 tests performed and at least 2 were positive, call it positive
 c1.m$ct_pos2[c1.m$N_tests>=2 & c1.m$n_pos>= 2 & c1.m$ct_min > 35] <- 
-  c1.m$ct_pos[c1.m$N_tests>=2 & c1.m$n_pos>= 2 & c1.m$ct_min > 35] #if 3 or more tests, and 0 or 1 are weakly positive or neg, then call it negative
+  c1.m$ct_pos[c1.m$N_tests>=2 & c1.m$n_pos>= 2 & c1.m$ct_min > 35] #if 2 or more tests, and 0 or 1 are weakly positive or neg, then call it negative
 
 #if min Ct>35, N tests is <=2 and only 1 positive, call it negative
-c1.m$ct_pos2[c1.m$N_tests<=2 & c1.m$n_pos<=1 & c1.m$ct_min > 35] <- c1.m$ct_pos2[c1.m$N_tests<=2 & c1.m$n_pos<=1 & c1.m$ct_min > 35] #if 2 or fewer tests, and at least 1 is positive, call positive
+c1.m$ct_pos2[c1.m$N_tests<=2 & c1.m$n_pos< c1.m$N_tests] <- 45 #if 2 or fewer tests, and at least 1 is positive, call positive
 
 
 

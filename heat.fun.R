@@ -96,7 +96,8 @@ tiff(paste("Heat", target,".tiff"), width=8, height=8, unit='in', res=200)
 grid.arrange(heat1[[4]],heat2[[4]],heat3[[4]],heat4[[4]],ncol=4)
 dev.off()
 
-out.graph <- grid.arrange(heat1[[4]],heat2[[4]],ncol=2)
+out.graph <- grid.arrange(heat1[[4]],heat2[[4]],heat3[[4]],heat4[[4]],ncol=4)
+
 return(out.graph)
 
 }
