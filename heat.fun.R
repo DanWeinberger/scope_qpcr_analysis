@@ -1,7 +1,7 @@
 
 heat.fun <- function( target='piab', cut1=15, cut2=45, cut3 = 47, cut4=95,cut5=141){
 #ds1 <- data.array[target,,]
-ds1 <- d1.ds
+ds1 <- clean_pcr$clean_pcr
 ds1$lyta[ds1$lyta==9999] <- NA
 ds1$piab[ds1$piab==9999] <- NA
 
