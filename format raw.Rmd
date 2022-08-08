@@ -196,12 +196,17 @@ summary(mod_s2)
 ```
 
 
+
+
 heat map of S1 contacts
 
 
 ```{r, fig.width=4, fig.height=8}
 
-heat.fun.contact()
+heat.fun.contact(ds=s1_data$contacts_wide_s1)
+
+
+heat.fun.contact(ds=s2_data$contacts_wide_s2)
 
 
 ```

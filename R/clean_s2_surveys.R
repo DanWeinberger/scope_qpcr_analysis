@@ -15,7 +15,19 @@ s2_pcr <- d1.ds[grep('S2', d1.ds$ID),]
 s2_a <- merge(s2_pcr, s2_surv, by=c('ID','time'), all=T) %>%
   mutate(piab_pos = 1*(piab<40))
 
-out.list <- list('survey_and_pcr_s2'=s2_a)
+N_surveys <- dcast(s2_a[c('ID','time','child_contact_2weeks')], ID~time, fun.aggregate = length)
+
+s2_a <- s2_a %>%
+  filter(!is.na(time))
+
+s2_a$child_contact_2weeks[is.na(s2_a$child_contact_2weeks)] <- 9999
+s2_a$child_contact_2weeks[is.infinite(s2_a$child_contact_2weeks)] <- 9999
+
+
+
+N_contacts <- dcast(s2_a[c('ID','time','child_contact_2weeks')], ID~time, fun.aggregate = max, na.rm=T, fill=9999)
+
+out.list <- list('survey_and_pcr_s2'=s2_a,'contacts_wide_s2'=N_contacts)
 
 return(out.list)
 

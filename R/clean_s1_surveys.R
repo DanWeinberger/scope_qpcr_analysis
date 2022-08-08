@@ -391,6 +391,6 @@ actitivity_sumamry <- e3 %>%
             
   )
 
-out.list <- list('actitivity_summary_s1'=actitivity_sumamry, 'survey_and_pcr_s1'=e3)
+out.list <- list('actitivity_summary_s1'=actitivity_sumamry, 'survey_and_pcr_s1'=e3, 'contacts_wide_s1'=q3.c)
 return(out.list)
 }
