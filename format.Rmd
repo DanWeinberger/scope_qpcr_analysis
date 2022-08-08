@@ -22,12 +22,16 @@ a1 <-read_excel('./Data/SCOPE_Master_20210108.xlsx', sheet='COM SAL')
 a1$lytA[is.na(a1$lytA)] <- 45
 a1$piaB[is.na(a1$piaB)] <- 45
 
-a1$`lyta Repeated`[is.na(a1$`lyta Repeated`) & !is.na(a1$`DNA Date repeat`)] <- 45
+a1$`lyta Repeated 1`[is.na(a1$`lyta Repeated 1`) & !is.na(a1$`DNA Date repeat`)] <- 45
 
-a1$`piaB repeated`[is.na(a1$`piaB repeated`) & !is.na(a1$`DNA Date repeat`)] <- 45
+a1$`piaB repeated 1`[is.na(a1$`piaB repeated 1`) & !is.na(a1$`DNA Date repeat`)] <- 45
+
+a1$`lyta Repeated 2`[is.na(a1$`lyta Repeated 2`) & !is.na(a1$`DNA Date repeat`)] <- 45
+
+a1$`piaB repeated 2`[is.na(a1$`piaB repeated 2`) & !is.na(a1$`DNA Date repeat`)] <- 45
 
 a1$pos.initial <- a1$lytA<45 & a1$piaB<45
-a1$pos.repeat <- a1$`lyta Repeated`<45 & a1$`piaB repeated`<45
+a1$pos.repeat <- (a1$`lyta Repeated 1`<45 & a1$`piaB repeated 1`<45 ) | (a1$`lyta Repeated 2`<45 & a1$`piaB repeated 2`<45 ) 
 
 a1$pos.both <- a1$pos.initial
 a1$pos.both[a1$pos.repeat==0 & a1$pos.initial==1] <- 0
