@@ -211,6 +211,28 @@ heat.fun.contact(ds=s2_data$contacts_wide_s2)
 
 ```
 
+#CAUTION: look out for missing data and differences i how this is handled in S1 and S2
+```{r}
+
+prop.table(table(s1_data$survey_and_pcr_s1$child_contact_u12m))
+prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___1))
+
+prop.table(table(s1_data$survey_and_pcr_s1$child_contact_13_23m))
+prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___2))
+
+prop.table(table(s1_data$survey_and_pcr_s1$child_contact_24_59m))
+prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___3))
+
+prop.table(table(s1_data$survey_and_pcr_s1$child_contact_5_10y))
+prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___4))
+
+
+prop.table(table(s1_data$survey_and_pcr_s1$child_contact_over10y))
+prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___5))
+
+
+```
+
 ```{r, echo=F}
 hist(age1$AGE, main='Distribution of ages', xlab='Age(y)')
 ```
