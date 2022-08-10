@@ -2,6 +2,22 @@
 
 #Intake questionaire
 clean_s1_surveys <- function(){
+  key1a <- read.csv('./Data/hh_id_key.csv')
+  
+  master1 <- read_excel('./Data/confidential/SCOPE_Master_20210108.xlsx', sheet='COM SAL')
+  
+  
+  key2 <- read_excel('./Data/confidential/SCOPE Participant MRN and ID.xlsx', skip=1)
+  key3 <- cbind.data.frame('id'=c(100:101) , 'Household'=c(51,51) )
+  
+  key4a <- bind_rows(key1a,key3)
+  
+  key4a$id <- paste0('S1_', key4a$id)
+  key4a$Household <- paste0('S1_', key4a$Household) #SEASON 1 key
+  
+  key1ab <- bind_rows(key4a)
+  
+  
 q0a <-  read_excel('./Data/confidential/SCOPE Intake questionnaire_September 24, 2021_11.57.xlsx', skip=1)
 
 q0a$`Date of Visit` <- parse_date_time(q0a$`Date of Visit`, orders=c('d-b-Y','d/b/Y','d-m-Y','m/d/Y','m/d/y','Y-m-d'))
@@ -263,6 +279,10 @@ q3.c <- merge(q2.c, key1ab, by.x='ID',by.y='id')
 
 
 ##NEED TO FIX THIS MERGE--MR and visitN could be missing
+d1.ds <- readRDS('./data/PCR_compiled.rds')
+
+d1.ds <- d1.ds[grep('S1', d1.ds$ID),]
+
 e3 <- merge(d1.ds, q4, by.x=c('ID','time'), by.y=c("ID",'visitN'), all=T)  
 
 
@@ -324,63 +344,59 @@ e3$month <- month(e3$visit_date_cleaned)
 
 e3$contact_children[is.na(e3$contact_children) | e3$contact_children=='NA'] <- 'missing'
 
-e3$child_contact_u12m <- 'No'
-e3$child_contact_u12m[grep('<12 m', e3$age_child_contacts)] <- 'Yes'
-e3$child_contact_u12m[is.na(e3$age_child_contacts)] <- 'Not answered'
+e3$child_contact <- 9999
+e3$child_contact[e3$contact_children=='Yes'] <- 1
+e3$child_contact[e3$contact_children=='No'] <- 0
 
-e3$child_contact_u5y <- 'No'
-e3$child_contact_u5y[grep('<12 m', e3$age_child_contacts)] <- 'Yes'
-e3$child_contact_u5y[grep('13-23 mo', e3$age_child_contacts)] <- 'Yes'
-e3$child_contact_u5y[grep('24-59 months', e3$age_child_contacts)] <- 'Yes'
-e3$child_contact_u5y[is.na(e3$age_child_contacts) & e3$contact_children!='No'] <- 'Not answered'
+e3$child_contact_u12m <- 0
+e3$child_contact_u12m[grep('<12 m', e3$age_child_contacts)] <- 1
+e3$child_contact_u12m[is.na(e3$age_child_contacts) & e3$contact_children!='No'] <- 9999
 
+e3$child_contact_13_23m <- 0
+e3$child_contact_13_23m[grep('13-23 mo', e3$age_child_contacts)] <- 1
+e3$child_contact_13_23m[is.na(e3$age_child_contacts) & e3$contact_children!='No'] <- 9999
 
-e3$child_contact_u12m <- 'No'
-e3$child_contact_u12m[grep('<12 m', e3$age_child_contacts)] <- 'Yes'
-e3$child_contact_u12m[is.na(e3$age_child_contacts) & e3$contact_children!='No'] <- 'Not answered'
+e3$child_contact_24_59m <- 0
+e3$child_contact_24_59m[grep('24-59 months', e3$age_child_contacts)] <- 1
+e3$child_contact_24_59m[is.na(e3$age_child_contacts) & e3$contact_children!='No'] <- 9999
 
-e3$child_contact_13_23m <- 'No'
-e3$child_contact_13_23m[grep('13-23 mo', e3$age_child_contacts)] <- 'Yes'
-e3$child_contact_13_23m[is.na(e3$age_child_contacts) & e3$contact_children!='No'] <- 'Not answered'
+e3$child_contact_5_10y <- 0
+e3$child_contact_5_10y[grep('5-10 years', e3$age_child_contacts)] <- 1
+e3$child_contact_5_10y[is.na(e3$age_child_contacts) & e3$contact_children!='No'] <- 9999
 
-e3$child_contact_24_59m <- 'No'
-e3$child_contact_24_59m[grep('24-59 months', e3$age_child_contacts)] <- 'Yes'
-e3$child_contact_24_59m[is.na(e3$age_child_contacts) & e3$contact_children!='No'] <- 'Not answered'
-
-e3$child_contact_5_10y <- 'No'
-e3$child_contact_5_10y[grep('5-10 years', e3$age_child_contacts)] <- 'Yes'
-e3$child_contact_5_10y[is.na(e3$age_child_contacts) & e3$contact_children!='No'] <- 'Not answered'
-
-e3$child_contact_over10y <- 'No'
-e3$child_contact_over10y[grep('>10 years', e3$age_child_contacts)] <-'Yes'
-e3$child_contact_over10y[is.na(e3$age_child_contacts) & e3$contact_children!='No'] <- 'Not answered'
+e3$child_contact_over10y <- 0
+e3$child_contact_over10y[grep('>10 years', e3$age_child_contacts)] <-1
+e3$child_contact_over10y[is.na(e3$age_child_contacts) & e3$contact_children!='No'] <- 9999
 
 
-e3$soc_act_bin <- 0
-e3$soc_act_bin[e3$recent_social_activities=='No'] <- 0
-e3$soc_act_bin[e3$recent_social_activities=='Yes'] <- 1
+e3$activities <- 0
+e3$activities[e3$recent_social_activities=='No'] <- 0
+e3$activities[e3$recent_social_activities=='Yes'] <- 1
+e3$activities[is.na(e3$social_activity_type)] <- 9999
 
-e3$soc_act_family_bin <- 0
-e3$soc_act_family_bin[e3$social_activity_type=='Activities with family'] <- 1
+e3$activity_family <- 0
+e3$activity_family[e3$social_activity_type=='Activities with family'] <- 1
+e3$activity_family[is.na(e3$social_activity_type)] <- 9999
 
+e3$activity_friends <- 0
+e3$activity_friends[e3$social_activity_type=='Activities with friends'] <- 1
+e3$activity_friends[is.na(e3$social_activity_type)] <- 9999
 
-e3$soc_act_friend_bin <- 0
-e3$soc_act_friend_bin[e3$social_activity_type=='Activities with friends'] <- 1
+e3$activity_community_center <- 0
+e3$activity_community_center[e3$social_activity_type=='Activities at community centers'] <- 1
+e3$activity_community_center[is.na(e3$social_activity_type)] <- 9999
 
+e3$acitivity_fitness <- 0
+e3$acitivity_fitness[e3$social_activity_type=='Fitness activities'] <- 1
+e3$acitivity_fitness[is.na(e3$social_activity_type)] <- 9999
 
-e3$soc_act_comm_ctr_bin <- 0
-e3$soc_act_comm_ctr_bin[e3$social_activity_type=='Activities at community centers'] <- 1
-
-e3$soc_act_fitness_bin <- 0
-e3$soc_act_fitness_bin[e3$social_activity_type=='Fitness activities'] <- 1
-
-actitivity_sumamry <- e3 %>%
+actitivity_summary <- e3 %>%
   group_by(ID) %>%
-  summarize(soc_activity= max(soc_act_bin, na.rm=T) ,
-            soc_activity_family= max(soc_act_family_bin, na.rm=T) ,
-            soc_activity_friend= max(soc_act_friend_bin, na.rm=T) ,
-            soc_activity_comm_ctr= max(soc_act_comm_ctr_bin, na.rm=T) ,
-            soc_activity_fitness= max(soc_act_fitness_bin, na.rm=T) 
+  summarize(soc_activity= max(activities, na.rm=T) ,
+            soc_activity_family= max(activity_family, na.rm=T) ,
+            soc_activity_friend= max(activity_friends, na.rm=T) ,
+            soc_activity_comm_ctr= max(activity_community_center, na.rm=T) ,
+            soc_activity_fitness= max(acitivity_fitness, na.rm=T) 
   ) %>%
   ungroup() %>%
   summarize(freq_activity=mean(soc_activity, na.rm=T), N_activity=sum(soc_activity, na.rm=T),
@@ -391,6 +407,7 @@ actitivity_sumamry <- e3 %>%
             
   )
 
-out.list <- list('actitivity_summary_s1'=actitivity_sumamry, 'survey_and_pcr_s1'=e3, 'contacts_wide_s1'=q3.c)
+out.list <- list('actitivity_summary_s1'=actitivity_summary, 'survey_and_pcr_s1'=e3, 'contacts_wide_s1'=q3.c)
 return(out.list)
 }
+

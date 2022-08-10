@@ -179,19 +179,63 @@ s1_data <- clean_s1_surveys()
 Season 2 surveys
 ```{r}
 s2_data <- clean_s2_surveys()
-prop.table(table(s2_data$survey_and_pcr_s2$child_contact_2weeks, s2_data$survey_and_pcr_s2$piab_pos), margin=1)
+```
 
-prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___1, s2_data$survey_and_pcr_s2$piab_pos), margin=1)
 
-prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___2, s2_data$survey_and_pcr_s2$piab_pos), margin=1)
+Combine S1 and S2 data
+```{r}
 
-prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___3, s2_data$survey_and_pcr_s2$piab_pos), margin=1)
+s1 <- s1_data$survey_and_pcr_s1 %>%
+  select(ID, time, Household, lyta, piab,activities, activity_family, activity_friends, activity_community_center, acitivity_fitness,child_contact,child_contact_u12m,child_contact_13_23m,child_contact_24_59m ,child_contact_5_10y,child_contact_over10y )
+
+s2 <- s2_data$survey_and_pcr_s2  %>%
+  select(ID, time, Household, lyta, piab,activities, activity_family, activity_friends, activity_community_center, acitivity_fitness,child_contact, child_contact_u12m,child_contact_13_23m,child_contact_24_59m ,child_contact_5_10y,child_contact_over10y )
+
+ds.c <- bind_rows(s1, s2) %>%
+  mutate(season= str_extract(ID, "[^_]+"), 
+         piab_pos=1*(ds.c$piab<45))
+
+```
+
+Overall prevalence by season
+```{r}
+
+ds.c %>%
+  group_by(season) %>%
+  summarize(prevalence= mean(piab_pos, na.rm=T), N_pos=sum(piab_pos, na.rm=T), n_test=n())
+```
+
+Rate of contacts by season
+```{r}
+ds.c %>%
+  group_by(season) %>%
+  filter(child_contact %in% c(0,1)) %>%
+  summarize(pct_child_contact= mean(child_contact, na.rm=T),  
+            pct_child_contact_u12m= mean(child_contact_u12m, na.rm=T),
+            pct_child_contact_u13_23m= mean(child_contact_13_23m, na.rm=T),
+            pct_child_contact_u12m= mean(child_contact_u12m, na.rm=T),
+            pct_child_contact_24_5m= mean(child_contact_24_59m, na.rm=T),
+            pct_child_contact_5_10y= mean(child_contact_5_10y, na.rm=T),
+            n_test=n())
+
+```
+
+
+
+```{r}
+prop.table(table(ds.c$child_contact, ds.c$piab_pos), margin=1)
+
+prop.table(table(ds.c$child_contact_u12m, ds.c$piab_pos), margin=1)
+
+prop.table(table(ds.c$child_contact_13_23m, ds.c$piab_pos), margin=1)
+
+prop.table(table(ds.c$child_contact_24_59m, ds.c$piab_pos), margin=1)
            
-prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___4, s2_data$survey_and_pcr_s2$piab_pos), margin=1)
+prop.table(table(ds.c$child_contact_5_10y, ds.c$piab_pos), margin=1)
 
-prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___5, s2_data$survey_and_pcr_s2$piab_pos), margin=1)
+prop.table(table(ds.c$child_contact_over10y, ds.c$piab_pos), margin=1)
 
-mod_s2 <- glm(piab_pos ~ child_contact_age___1 + child_contact_age___2 + child_contact_age___3 + child_contact_age___4 + child_contact_age___5, family='binomial', data=s2_data$survey_and_pcr_s2 )
+mod_s2 <- glm(piab_pos ~ child_contact_u12m + child_contact_13_23m + child_contact_24_59m + child_contact_5_10y + child_contact_over10y , family='binomial', data=ds.c )
 summary(mod_s2)
 ```
 
@@ -211,27 +255,8 @@ heat.fun.contact(ds=s2_data$contacts_wide_s2)
 
 ```
 
-#CAUTION: look out for missing data and differences i how this is handled in S1 and S2
-```{r}
-
-prop.table(table(s1_data$survey_and_pcr_s1$child_contact_u12m))
-prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___1))
-
-prop.table(table(s1_data$survey_and_pcr_s1$child_contact_13_23m))
-prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___2))
-
-prop.table(table(s1_data$survey_and_pcr_s1$child_contact_24_59m))
-prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___3))
-
-prop.table(table(s1_data$survey_and_pcr_s1$child_contact_5_10y))
-prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___4))
 
 
-prop.table(table(s1_data$survey_and_pcr_s1$child_contact_over10y))
-prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___5))
-
-
-```
 
 ```{r, echo=F}
 hist(age1$AGE, main='Distribution of ages', xlab='Age(y)')

@@ -1,0 +1,13 @@
+Variable / Field Name,Form Name,Section Header,Field Type,Field Label,"Choices, Calculations, OR Slider Labels",Field Note,Text Validation Type OR Show Slider Number,Text Validation Min,Text Validation Max,Identifier?,Branching Logic (Show field only if...),Required Field?,Custom Alignment,Question Number (surveys only),Matrix Group Name,Matrix Ranking?,Field Annotation
+participant_id,relationship_scope_2022,,text,Participant ID,,,,,,,,,,,,,
+study_id,relationship_scope_2022,,text,What is your Study ID?,,,number,1,200,,,y,,,,,
+date_of_visit,relationship_scope_2022,,text,Date of Visit,,,date_mdy,,,,,y,,,,,
+description_of_measure,relationship_scope_2022,RELATIONSHIP ASSESSMENT SCALE,descriptive,"Description of Measure:
+A 7-item scale designed to measure general relationship satisfaction. Respondents answer each item using a 5-point scale ranging from 1 (low satisfaction) to 5 (high satisfaction).",,,,,,,,,,,,,
+relationship_needs,relationship_scope_2022,Scale:,radio,1. How well does your partner meet your needs?,"1, 1(low) | 2, 2 | 3, 3 | 4, 4 | 5, 5(high)",,,,,,,,,,scale,,
+relationship_satisfied,relationship_scope_2022,,radio,"2. In general, how satisfied are you with your relationship?","1, 1(low) | 2, 2 | 3, 3 | 4, 4 | 5, 5(high)",,,,,,,,,,scale,,
+relationship_compared,relationship_scope_2022,,radio,3. How good is your relationship compared to most?,"1, 1(low) | 2, 2 | 3, 3 | 4, 4 | 5, 5(high)",,,,,,,,,,scale,,
+relationship_wish,relationship_scope_2022,,radio,4. How often do you wish you hadn't gotten into this relationship?,"1, 1(low) | 2, 2 | 3, 3 | 4, 4 | 5, 5(high)",,,,,,,,,,scale,,
+relationship_expectations,relationship_scope_2022,,radio,5. To what extent has your relationship met your original expectations?,"1, 1(low) | 2, 2 | 3, 3 | 4, 4 | 5, 5(high)",,,,,,,,,,scale,,
+relationship_love,relationship_scope_2022,,radio,6. How much do you love your partner?,"1, 1(low) | 2, 2 | 3, 3 | 4, 4 | 5, 5(high)",,,,,,,,,,scale,,
+relationship_problems,relationship_scope_2022,,radio,7. How many problems are there in your relationship?,"1, 1(low) | 2, 2 | 3, 3 | 4, 4 | 5, 5(high)",,,,,,,,,,scale,,
