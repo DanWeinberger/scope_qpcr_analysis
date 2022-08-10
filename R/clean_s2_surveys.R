@@ -3,7 +3,18 @@ library(dplyr)
 
 clean_s2_surveys <- function(){
 s2_surv <- read.csv('./Data/confidential/Season_2_Surveys/Uptodat Fortnightly_Wyllie_DATA_2022-07-21_1314 .csv') %>%
-  rename(scope_id=participant_id) %>%
+  rename(scope_id=participant_id, child_contact=child_contact_2weeks,
+         child_contact0_11m=child_contact_age___1,
+         child_contact12_23m=child_contact_age___2,
+         child_contact24_59m=child_contact_age___3,
+         child_contact5_9y=child_contact_age___4,
+         child_contact10plusy=child_contact_age___5,
+         activity_community_center=activities_describe___1,
+         activity_friends=activities_describe___2,
+         activity_family=activities_describe___3,
+         acitivity_fitness=activities_describe___4,
+         activity_other=activities_describe___5
+         ) %>%
   mutate(ID = paste0('S2_',gsub("\\..*","",scope_id)) , time=visit_number)
 
 table(s2_surv$visit_number)
