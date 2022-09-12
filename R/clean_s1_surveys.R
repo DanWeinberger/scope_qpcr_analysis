@@ -3,6 +3,33 @@
 #Intake questionaire
 clean_s1_surveys <- function(){
 q0a <-  read_excel('./Data/confidential/SCOPE Intake questionnaire_September 24, 2021_11.57.xlsx', skip=1)
+key2 <- read_excel('./Data/confidential/SCOPE Participant MRN and ID.xlsx', skip=1)
+
+s1_demographics <- read_excel('./Data/scope_demographics deidentified S1.xlsx') 
+  #mutate(ID = as.numeric(ID), ID=paste0('S1_',ID))
+
+c1.c <- read.csv( './Data/cleaned_file_s2.csv')
+
+all.ids <- unique(c1.c$Sample)
+all.ids <- all.ids[substr(all.ids,1,2)=='S2']
+all.ids <- gsub(".*_","",all.ids)
+all.ids <- sub('\\..*', '', all.ids)
+all.ids <- sort(as.numeric(as.character(unique(all.ids))))
+
+key4b <- cbind.data.frame('id'=all.ids ,'Household'=rep(1:(length(all.ids)/2),each=2) )      
+key4b$id <- paste0('S2_', key4b$id)
+key4b$Household <- paste0('S2_', key4b$Household) #SEASON 1 key
+
+key2 <- read_excel('./Data/confidential/SCOPE Participant MRN and ID.xlsx', skip=1)
+key3 <- cbind.data.frame('id'=c(100:101) , 'Household'=c(51,51) )
+key1a <- read.csv('./Data/hh_id_key.csv')
+
+key4a <- bind_rows(key1a,key3)
+
+key4a$id <- paste0('S1_', key4a$id)
+key4a$Household <- paste0('S1_', key4a$Household) #SEASON 1 key
+
+key1ab <- bind_rows(key4a, key4b)
 
 q0a$`Date of Visit` <- parse_date_time(q0a$`Date of Visit`, orders=c('d-b-Y','d/b/Y','d-m-Y','m/d/Y','m/d/y','Y-m-d'))
 
@@ -60,7 +87,7 @@ q0 <- q0[,c(which(names(q0) %in% select.colnames),grep('Are you experiencing any
 
 #q0b <- q0b[,c(which(names(q0b) %in% select.colnames),grep('Are you experiencing any of the following symptoms today', names(q0b)) )]
 
-rename.intake <- c('MRN','scope_id', 'visit_date','visit_location', 'dob','pos_covid_past', 'pos_covid_date', 'pneu_vax', 'pneu_vax_date','pneumonia_hosp', 'recent_abx', 'weight','height','education','ethnicity', 'hh_relationship', 'relationship_duration','hh_contact_time','flu_shot', 'recent_nasal', 'recent_cough', 'recent_runny_nose', 'recent_sore_throat', 'recent_fever','immuno_meds','diabetes_meds','asthma_meds', 'current_smoke', 'contact_children','age_child_contacts', 'frequency_child_contacts', 'time_day_child_contacts', 'time_sample', 'current_nasal','current_cough', 'current_runny_nose', 'current_sore_throat','current_fever', 'other_symp1','othr_symp2')
+rename.intake <- c('MRN','scope_id', 'visit_date','visit_location', 'pos_covid_past', 'pos_covid_date', 'pneu_vax', 'pneu_vax_date','pneumonia_hosp', 'recent_abx', 'weight','height','education','ethnicity', 'hh_relationship', 'relationship_duration','hh_contact_time','flu_shot', 'recent_nasal', 'recent_cough', 'recent_runny_nose', 'recent_sore_throat', 'recent_fever','immuno_meds','diabetes_meds','asthma_meds', 'current_smoke', 'contact_children','age_child_contacts', 'frequency_child_contacts', 'time_day_child_contacts', 'time_sample', 'current_nasal','current_cough', 'current_runny_nose', 'current_sore_throat','current_fever', 'other_symp1','othr_symp2')
 
 names(q0) <- rename.intake
 
@@ -83,7 +110,7 @@ select.colnames.q1 <- c('MRN', "Fortnightly visit number:", "SCOPE ID if known/l
 rename.q1 <-c('MRN','scope_id', 'visit_date', 'visitN', 'visit_location','recent_social_activities','social_activity_type', 'contact_children','age_child_contacts', 'frequency_child_contacts', 'time_day_child_contacts','recent_covid_test', 'recent_doctor','recent_abx', 'recent_vaccines', 'sample_time', 'current_nasal','current_cough', 'current_runny_nose', 'current_sore_throat','current_fever', 'other_symp1','othr_symp2','recent_nasal', 'recent_cough', 'recent_runny_nose', 'recent_sore_throat', 'recent_fever' , 'recent_other_symp1','recent_other_symp2')
 
 
-q0.baseline.vars <- c('dob','scope_id',"pos_covid_past","pos_covid_date","pneu_vax", "pneu_vax_date",'ethnicity','weight','height','education', "immuno_meds" ,"diabetes_meds", "asthma_meds","flu_shot","hh_relationship", "relationship_duration")
+q0.baseline.vars <- c('scope_id',"pos_covid_past","pos_covid_date","pneu_vax", "pneu_vax_date",'ethnicity','weight','height','education', "immuno_meds" ,"diabetes_meds", "asthma_meds","flu_shot","hh_relationship", "relationship_duration")
 
 q1 <- q1[,c(which(names(q1) %in% select.colnames.q1),grep('Which symptoms are you experiencing today', names(q1)),grep('Have you had any of the following symptoms', names(q1))  )]
 
@@ -173,33 +200,46 @@ q0$MRN <-  gsub("mr","", q0$MRN )
 q0$MRN <-  as.numeric(q0$MRN)
 q2$MRN <-  gsub("MR","", q2$MRN )
 merge_key <- unique(q2[, c('MRN',  "MRN_cleaned" )])
-q0a <- merge(q0, merge_key, by='MRN', all=T)
+
+q0 <- as.data.frame(q0)
+
+merge_key <- as.data.frame(merge_key)
+
+q0a <- merge(q0, merge_key, by.x='MRN', by.y='MRN') ##all=T)
 
 q3 <- merge(q2, q0a[,which(names(q0a) %in% c('MRN_cleaned',q0.baseline.vars))], by= "MRN_cleaned", all.x=T)
 
 q3 <- q3[q3$visitN %in% c(1,2,3,4,5,6),]
 
 q3$visit_date_cleaned <- as.Date(q3$visit_date_cleaned)
-q3$dob_clean <-  parse_date_time(q3$dob, orders=c('%m/%d/%Y', '%m/%d/%y', '%d/%m/%y','%d/%m/%y','%m-%d-%Y','%d-%m-%Y'))
-q3$dob_clean[q3$dob=='1945'] <- as.Date('1945-01-01')
-q3$dob_clean[q3$dob=='/1947'] <- as.Date('1947-01-01')
-q3$dob_clean <- as.Date(q3$dob_clean)
-q3$dob_clean <- q3$dob_clean - 100*365*(q3$dob_clean>=as.Date('2000-01-01')) #if DOB >year 2000, indicates problem with date
-q3$age <- round(as.numeric(q3$visit_date_cleaned - as.Date(q3$dob_clean))/365) #only recorded at t=1
+
+#q3$age <- round(as.numeric(q3$visit_date_cleaned - as.Date(q3$dob_clean))/365) #only recorded at t=1
 #View(q2[, c('visitN','dob_clean',"MRN..Clean.",'Visit_date..Clean.') ])
 key2$mr_clean <- gsub('MR', '',key2$`MR#`,)
 #This is tricky..on key 2 is minimally cleaned; should match with uncleaned MRN on q3
 
+key2$mr_clean[key2$mr_clean==' 6450061'] <-  '6450061'
+
+q3$MRN_cleaned[q3$MRN_cleaned=='414574'] <-  '4149574'
+q3$MRN_cleaned[q3$MRN_cleaned=='1156975'] <-  '1156974'
+q3$MRN_cleaned[q3$MRN_cleaned=='24915329'] <-  '2495329'
+q3$MRN_cleaned[q3$MRN_cleaned=='121637'] <-  '1212637'
+
+q3 <- unique(q3)
 q4 <- merge(q3, key2, by.x="MRN_cleaned", by.y= "mr_clean" , all.x=T)
 
 q4$flag_id <- is.na(q4$`ID Number`)
-age1 <- read_excel('./Data/confidential/AGE Scope Participants samples pick-up 06-15-2021.xlsx', skip=1)
 
-age1$MRN_cleaned <- gsub( 'MR', '',age1$`MR#`)
-age1 <- age1[,c('MRN_cleaned', 'AGE' )]
-age1$MRN_cleaned <- as.numeric(age1$MRN_cleaned)
+s1_demographics$ID <- as.numeric(s1_demographics$ID)
+q4 <- merge(q4, s1_demographics, by.x="ID Number", by.y='ID', all=T)
 
-q4 <- merge(q4, age1, by='MRN_cleaned', all.x=T)
+#age1 <- read_excel('./Data/confidential/AGE Scope Participants samples pick-up 06-15-2021.xlsx', skip=1)
+
+#age1$MRN_cleaned <- gsub( 'MR', '',age1$`MR#`)
+#age1 <- age1[,c('MRN_cleaned', 'AGE' )]
+#age1$MRN_cleaned <- as.numeric(age1$MRN_cleaned)
+
+#q4 <- merge(q4, age1, by='MRN_cleaned', all.x=T)
 
 
 ##Flag duplicate survey entries
@@ -263,7 +303,7 @@ q3.c <- merge(q2.c, key1ab, by.x='ID',by.y='id')
 
 
 ##NEED TO FIX THIS MERGE--MR and visitN could be missing
-e3 <- merge(d1.ds, q4, by.x=c('ID','time'), by.y=c("ID",'visitN'), all=T)  
+e3 <- merge(clean_pcr$clean_pcr, q4, by.x=c('ID','time'), by.y=c("ID",'visitN'), all=T)  
 
 
 e3$social_activity_type <- as.character(e3$social_activity_type)
@@ -293,8 +333,8 @@ e3$education <- tolower(e3$education)
 e3$height <- gsub(' ', '', e3$height)
 ## export
 
-id.ages <- unique(e3[,c('ID','AGE')])
-id.ages <- id.ages[!is.na(id.ages$AGE),]
+id.ages <- unique(e3[,c('ID','Age')])
+id.ages <- id.ages[!is.na(id.ages$Age),]
 
 exp1 <- e3[,c('ID','time','piab', 'lyta','Household','MRN_cleaned', 'education','ethnicity',"hh_relationship"  ,        "relationship_duration","pneu_vax_dic" ,"pneu_vax_date" ,"weight", "height","pos_covid_past" ,          "pos_covid_date","smoke_dic", "contact_children" ,       
               "age_child_contacts"  ,     "frequency_child_contacts" ,"time_day_child_contacts" )]

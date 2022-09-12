@@ -121,8 +121,6 @@ N.id
 N.hh<- length(unique(c1.m.c$Household))
 N.hh
 
-
-
 #N samples
 nrow(c1.m.c)
 #length(unique(c1.m.c$Sample[c1.m$Target=='piab']))
@@ -174,6 +172,8 @@ Season 1 surveys
 ```{r}
 
 s1_data <- clean_s1_surveys()
+
+
 ```
 
 Season 2 surveys
@@ -196,6 +196,25 @@ summary(mod_s2)
 ```
 
 
+Differences by sex
+```{r}
+table(s1_data$survey_and_pcr_s1$piab_pos, s1_data$survey_and_pcr_s1$Gender)
+
+s1_data$survey_and_pcr_s1 %>%
+  filter(piab_pos==1) %>%
+  group_by(Gender) %>%
+  summarize(mean_ct=mean(piab)) 
+
+
+piab_men <- s1_data$survey_and_pcr_s1 %>%
+  filter(piab_pos==1 & Gender=='M')
+
+piab_women <- s1_data$survey_and_pcr_s1 %>%
+  filter(piab_pos==1 & Gender=='F')
+  
+  wilcox.test(piab_women$piab, piab_men$piab, alternative = "two.sided")
+
+```
 
 
 heat map of S1 contacts
