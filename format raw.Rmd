@@ -179,23 +179,33 @@ s1_data <- clean_s1_surveys()
 Season 2 surveys
 ```{r}
 s2_data <- clean_s2_surveys()
-prop.table(table(s2_data$survey_and_pcr_s2$child_contact_2weeks, s2_data$survey_and_pcr_s2$piab_pos), margin=1)
-
-prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___1, s2_data$survey_and_pcr_s2$piab_pos), margin=1)
-
-prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___2, s2_data$survey_and_pcr_s2$piab_pos), margin=1)
-
-prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___3, s2_data$survey_and_pcr_s2$piab_pos), margin=1)
-           
-prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___4, s2_data$survey_and_pcr_s2$piab_pos), margin=1)
-
-prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___5, s2_data$survey_and_pcr_s2$piab_pos), margin=1)
-
-mod_s2 <- glm(piab_pos ~ child_contact_age___1 + child_contact_age___2 + child_contact_age___3 + child_contact_age___4 + child_contact_age___5, family='binomial', data=s2_data$survey_and_pcr_s2 )
-summary(mod_s2)
 ```
 
 
+Combine S1 and S2 data
+```{r}
+
+s1 <- s1_data$survey_and_pcr_s1 %>%
+  select(ID, time, Household, lyta, piab,activities, activity_family, activity_friends, activity_community_center, acitivity_fitness,child_contact,child_contact_u12m,child_contact_13_23m,child_contact_24_59m ,child_contact_5_10y,child_contact_over10y )
+
+s2 <- s2_data$survey_and_pcr_s2  %>%
+  select(ID, time, Household, lyta, piab,activities, activity_family, activity_friends, activity_community_center, acitivity_fitness,child_contact, child_contact_u12m,child_contact_13_23m,child_contact_24_59m ,child_contact_5_10y,child_contact_over10y )
+
+ds.c <- bind_rows(s1, s2) %>%
+  mutate(season= str_extract(ID, "[^_]+"), 
+         piab_pos=1*(ds.c$piab<45))
+
+```
+
+Overall prevalence by season
+```{r}
+
+ds.c %>%
+  group_by(season) %>%
+  summarize(prevalence= mean(piab_pos, na.rm=T), N_pos=sum(piab_pos, na.rm=T), n_test=n())
+```
+
+<<<<<<< HEAD
 Differences by sex
 ```{r}
 table(s1_data$survey_and_pcr_s1$piab_pos, s1_data$survey_and_pcr_s1$Gender)
@@ -215,42 +225,141 @@ piab_women <- s1_data$survey_and_pcr_s1 %>%
   wilcox.test(piab_women$piab, piab_men$piab, alternative = "two.sided")
 
 ```
+=======
+Rate of contacts by season
+```{r}
+ds.c %>%
+  group_by(season) %>%
+  filter(child_contact %in% c(0,1)) %>%
+  summarize(pct_child_contact= mean(child_contact, na.rm=T),  
+            pct_child_contact_u12m= mean(child_contact_u12m, na.rm=T),
+            pct_child_contact_u13_23m= mean(child_contact_13_23m, na.rm=T),
+            pct_child_contact_u12m= mean(child_contact_u12m, na.rm=T),
+            pct_child_contact_24_5m= mean(child_contact_24_59m, na.rm=T),
+            pct_child_contact_5_10y= mean(child_contact_5_10y, na.rm=T),
+            n_test=n())
+>>>>>>> c8b9f8cae970678b5ac69abc2edc9822da4a20ed
+
+```
+
+
+
+```{r}
+prop.table(table(ds.c$child_contact, ds.c$piab_pos), margin=1)
+fisher.test(ds.c$piab_pos, ds.c$child_contact)
+
+
+
+prop.table(table(ds.c$child_contact_u12m, ds.c$piab_pos), margin=1)
+fisher.test(ds.c$piab_pos, ds.c$child_contact_u12m)
+
+
+prop.table(table(ds.c$child_contact_13_23m, ds.c$piab_pos), margin=1)
+fisher.test(ds.c$piab_pos, ds.c$child_contact_13_23m)
+
+prop.table(table(ds.c$child_contact_24_59m, ds.c$piab_pos), margin=1)
+fisher.test(ds.c$piab_pos, ds.c$child_contact_24_59m)
+
+prop.table(table(ds.c$child_contact_5_10y, ds.c$piab_pos), margin=1)
+fisher.test(ds.c$piab_pos, ds.c$child_contact_5_10y)
+
+prop.table(table(ds.c$child_contact_over10y, ds.c$piab_pos), margin=1)
+fisher.test(ds.c$piab_pos, ds.c$child_contact_over10y)
+
+mod_s2 <- glm(piab_pos ~ child_contact_u12m + child_contact_13_23m + child_contact_24_59m + child_contact_5_10y + child_contact_over10y , family='binomial', data=ds.c )
+summary(mod_s2)
+```
+
+GEE to account for within-individual repeated sampling
+```{r}
+mod.df <- ds.c %>%
+  filter(child_contact_13_23m!=9999 & !is.na(piab_pos)) %>%
+  mutate(ID=as.factor(ID))
+
+
+
+mod1.gee <- gee(piab_pos ~ child_contact_u12m+ child_contact_13_23m + child_contact_24_59m + child_contact_5_10y + child_contact_over10y,id=mod.df$ID, data=mod.df, family=binomial(link='log'), corstr="exchangeable")
+
+summary(mod1.gee)
+
+coefs <-mod1.gee$coefficients
+coef.lcl <- coefs - 1.96 * sqrt(diag(mod1.gee$naive.variance))
+coef.ucl <- coefs + 1.96 * sqrt(diag(mod1.gee$naive.variance))
+
+plot(1:5,coefs[-1])
+arrows(1:5, y0=coef.lcl[-1], y1=coef.ucl[-1])
+abline(h=0)
+
+```
+
+
+
+## Longitudinal analysis
+Uses a multi-state model framework to capture transition probabilities
+```{r}
+mod.df <- ds.c %>%
+  filter(child_contact_13_23m!=9999 & !is.na(piab_pos)) %>%
+  mutate(ID=as.factor(ID))
+
+mod.df$child_contact_u5 <- 
+  mod.df$child_contact_u12m + mod.df$child_contact_13_23m + mod.df$child_contact_24_59m
+
+
+#N contacts
+mod.df$child_contact_1_5 <- mod.df$child_contact_13_23m + mod.df$child_contact_24_59m
+
+
+l1 <- mod.df
+l1$day <- 0
+l1$day[l1$time==2] <- 14
+l1$day[l1$time==3] <- 14*2
+l1$day[l1$time==4] <- 14*3
+l1$day[l1$time==5] <- 14*4
+l1$day[l1$time==6] <- 14*5
+
+l1$state <- NA
+l1$state[l1$piab_pos==0 & !is.na(l1$piab_pos)] <- 1
+l1$state[l1$piab_pos==1 & !is.na(l1$piab_pos)] <- 2
+#l1$state <- as.factor(l1$state)
+
+
+q1 <- rbind(c( 0,0.01),
+           c(0.01,0)
+)
+
+l1 <- l1[order(l1$ID, l1$day),]
+
+l2 <- l1[, c('state','child_contact_u5','child_contact_1_5','child_contact','child_contact_u12m','child_contact_13_23m',"child_contact_24_59m","child_contact_5_10y",'child_contact_over10y', 'ID','day')]
+
+msm.mod1 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2)
+msm.mod1
+
+msm.mod1a <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_contact_u12m))
+msm.mod1a
+
+msm.mod1b <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_contact_1_5))
+msm.mod1b
+
+
+msm.mod1b <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_contact_u5))
+msm.mod1b
+
+```
+
+
 
 
 heat map of S1 contacts
 
 
 ```{r, fig.width=4, fig.height=8}
-
 heat.fun.contact(ds=s1_data$contacts_wide_s1)
 
-
 heat.fun.contact(ds=s2_data$contacts_wide_s2)
-
-
 ```
 
-#CAUTION: look out for missing data and differences i how this is handled in S1 and S2
-```{r}
-
-prop.table(table(s1_data$survey_and_pcr_s1$child_contact_u12m))
-prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___1))
-
-prop.table(table(s1_data$survey_and_pcr_s1$child_contact_13_23m))
-prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___2))
-
-prop.table(table(s1_data$survey_and_pcr_s1$child_contact_24_59m))
-prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___3))
-
-prop.table(table(s1_data$survey_and_pcr_s1$child_contact_5_10y))
-prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___4))
 
 
-prop.table(table(s1_data$survey_and_pcr_s1$child_contact_over10y))
-prop.table(table(s2_data$survey_and_pcr_s2$child_contact_age___5))
-
-
-```
 
 ```{r, echo=F}
 hist(age1$AGE, main='Distribution of ages', xlab='Age(y)')
@@ -299,44 +408,6 @@ How much contact per day do you have?
 
 ```{r, echo=F}
 table1(~piab_pos|`time_day_child_contacts` , data= s1_data$survey_and_pcr_s1 )
-
-```
-
-What ages do you have contact with?
-
-<12m?
-
-```{r, echo=F}
-table1(~piab_pos|child_contact_u12m  , data= s1_data$survey_and_pcr_s1 )
-fisher.test(s1_data$survey_and_pcr_s1$piab_pos, s1_data$survey_and_pcr_s1$child_contact_u12m)
-```
-
-12-59m?
-
-```{r, echo=F}
-
-s1_data$survey_and_pcr_s1$child_contact_13_59m <- s1_data$survey_and_pcr_s1$child_contact_13_23m
-s1_data$survey_and_pcr_s1$child_contact_13_59m[s1_data$survey_and_pcr_s1$child_contact_24_59m=='Yes'] <- 'Yes'
-
-
-table1(~piab_pos|child_contact_13_59m  , data= s1_data$survey_and_pcr_s1 )
-fisher.test(s1_data$survey_and_pcr_s1$piab_pos, s1_data$survey_and_pcr_s1$child_contact_13_59m)
-
-```
-
-12-23m?
-
-```{r, echo=F}
-table1(~piab_pos|child_contact_13_23m  , data= s1_data$survey_and_pcr_s1 )
-fisher.test(s1_data$survey_and_pcr_s1$piab_pos, s1_data$survey_and_pcr_s1$child_contact_13_23m)
-
-```
-
-2-5y
-
-```{r, echo=F}
-table1(~piab_pos|child_contact_24_59m  , data= s1_data$survey_and_pcr_s1 )
-fisher.test(s1_data$survey_and_pcr_s1$piab_pos, s1_data$survey_and_pcr_s1$child_contact_24_59m)
 
 ```
 
