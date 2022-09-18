@@ -25,6 +25,7 @@ library(pheatmap)
 library(RColorBrewer)
 library(cowplot)
 library(gridExtra)
+library(ggplot2)
 library(ggplotify)
 library(table1)
 library(lubridate)
@@ -186,14 +187,14 @@ Combine S1 and S2 data
 ```{r}
 
 s1 <- s1_data$survey_and_pcr_s1 %>%
-  select(ID, time, Household, lyta, piab,activities, activity_family, activity_friends, activity_community_center, acitivity_fitness,child_contact,child_contact_u12m,child_contact_13_23m,child_contact_24_59m ,child_contact_5_10y,child_contact_over10y )
+  select(ID, time, Household, lyta, piab,activities, activity_family, activity_friends, activity_community_center, acitivity_fitness,child_contact,child_contact_u12m,child_contact_13_23m,child_contact_24_59m ,child_contact_5_10y,child_contact_over10y , Age, Gender, Race, Ethnicity)
 
 s2 <- s2_data$survey_and_pcr_s2  %>%
-  select(ID, time, Household, lyta, piab,activities, activity_family, activity_friends, activity_community_center, acitivity_fitness,child_contact, child_contact_u12m,child_contact_13_23m,child_contact_24_59m ,child_contact_5_10y,child_contact_over10y )
+  select(ID, time, Household, lyta, piab,activities, activity_family, activity_friends, activity_community_center, acitivity_fitness,child_contact, child_contact_u12m,child_contact_13_23m,child_contact_24_59m ,child_contact_5_10y,child_contact_over10y,, Age, Gender, Race, Ethnicity )
 
 ds.c <- bind_rows(s1, s2) %>%
   mutate(season= str_extract(ID, "[^_]+"), 
-         piab_pos=1*(ds.c$piab<45))
+         piab_pos=1*(piab<45))
 
 ```
 
@@ -205,27 +206,34 @@ ds.c %>%
   summarize(prevalence= mean(piab_pos, na.rm=T), N_pos=sum(piab_pos, na.rm=T), n_test=n())
 ```
 
-<<<<<<< HEAD
 Differences by sex
 ```{r}
-table(s1_data$survey_and_pcr_s1$piab_pos, s1_data$survey_and_pcr_s1$Gender)
+ds.c$Gender[ds.c$Gender=='Female'] <- 'F'
+ds.c$Gender[ds.c$Gender=='Male'] <- 'M'
 
-s1_data$survey_and_pcr_s1 %>%
+table(ds.c$piab_pos, ds.c$Gender)
+
+ds.c %>%
   filter(piab_pos==1) %>%
   group_by(Gender) %>%
   summarize(mean_ct=mean(piab)) 
 
 
-piab_men <- s1_data$survey_and_pcr_s1 %>%
+piab_men <- ds.c %>%
   filter(piab_pos==1 & Gender=='M')
 
-piab_women <- s1_data$survey_and_pcr_s1 %>%
+piab_women <- ds.c %>%
   filter(piab_pos==1 & Gender=='F')
   
   wilcox.test(piab_women$piab, piab_men$piab, alternative = "two.sided")
 
+  
+  ds.c %>%
+  filter(piab_pos==1) %>%
+    ggplot( aes(x=Gender,y=piab)) +
+    geom_violin()+ theme_classic()
 ```
-=======
+
 Rate of contacts by season
 ```{r}
 ds.c %>%
@@ -238,7 +246,6 @@ ds.c %>%
             pct_child_contact_24_5m= mean(child_contact_24_59m, na.rm=T),
             pct_child_contact_5_10y= mean(child_contact_5_10y, na.rm=T),
             n_test=n())
->>>>>>> c8b9f8cae970678b5ac69abc2edc9822da4a20ed
 
 ```
 

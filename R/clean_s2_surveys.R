@@ -20,7 +20,29 @@ s2_surv <- read.csv('./Data/confidential/Season_2_Surveys/Uptodat Fortnightly_Wy
 
 table(s2_surv$visit_number)
 
-d1.ds <- readRDS( './data/PCR_compiled.rds')
+d1.ds <- readRDS( './Data/PCR_compiled.rds')
+
+s1_demographics <- read_excel('./Data/scope_demographics deidentified S1.xlsx') %>%
+  rename(`season 1 scope ID`=ID) %>%
+  mutate(`season 1 scope ID`=as.numeric(`season 1 scope ID`))
+
+s2_demographics_b <- read_excel('./Data/confidential/New Participants SCOPE_season 2.xlsx', sheet='repeat participant cheat sheet')
+
+s2_demographics_b2 <- left_join(s2_demographics_b,s1_demographics, by="season 1 scope ID") %>%
+  rename(ID=`season 2 scope ID`) %>%
+  select(ID, Age, Gender, Race, Ethnicity)
+
+s2_demographics_a <- read_excel('./Data/confidential/New Participants SCOPE_season 2.xlsx', sheet='new participants season 2') %>%
+  rename(ID = `scope ID`, Race = `How would you describe your ethnicity?`,
+         Ethnicity = `Would you consider yourself Hispanic or Non-Hispanic?`,
+         dob= `What is your date of birth?`
+         ) %>%
+  mutate(Age = lubridate::time_length(difftime(as.Date('2022-01-01'), dob), "years") ) %>%
+  select(ID, Age, Gender, Race, Ethnicity)
+
+s2_demographics <- bind_rows(s2_demographics_a, s2_demographics_b2) %>%
+   mutate(ID= paste0('S2_',ID))
+
 
 s2_pcr <- d1.ds[grep('S2', d1.ds$ID),]
 
@@ -41,6 +63,7 @@ s2_a$child_contact_24_59m[is.na(s2_a$child_contact_24_59m)] <-9999
 s2_a$child_contact_5_10y[is.na(s2_a$child_contact_5_10y)] <-9999
 s2_a$child_contact_over10y[is.na(s2_a$child_contact_over10y)] <-9999
 
+s2_a <- merge(s2_a,s2_demographics, by='ID', all=T)
 
 N_contacts <- dcast(s2_a[c('ID','time','child_contact')], ID~time, fun.aggregate = max, na.rm=T, fill=9999)
 
