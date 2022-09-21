@@ -7,7 +7,7 @@
 # 3) if weak positive for piaB and then negative on 1 repeat performed and negative, then negative
 # 
 # 4) If posivi, take ave of Ct among those \<40
-clean_pcr <- function(){
+clean_pcr_fun <- function(){
 key1a <- read.csv('./Data/hh_id_key.csv')
 
 master1 <- read_excel('./Data/confidential/SCOPE_Master_20210108.xlsx', sheet='COM SAL')

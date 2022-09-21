@@ -65,6 +65,12 @@ s2_a$child_contact_over10y[is.na(s2_a$child_contact_over10y)] <-9999
 
 s2_a <- merge(s2_a,s2_demographics, by='ID', all=T)
 
+s2_a <- s2_a %>%
+  group_by(ID, time) %>%
+  mutate(repN=row_number()) %>%
+  filter(repN==1) %>%
+  ungroup()
+
 N_contacts <- dcast(s2_a[c('ID','time','child_contact')], ID~time, fun.aggregate = max, na.rm=T, fill=9999)
 
 out.list <- list('survey_and_pcr_s2'=s2_a,'contacts_wide_s2'=N_contacts)

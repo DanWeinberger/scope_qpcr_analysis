@@ -57,11 +57,11 @@ What to do if we have borderline positive then negative test:
 
 3) if weak positive for piaB and then negative on 1 repeat performed and negative, then negative
 
-4) If posivi, take ave of Ct among those \<40
+4) If positive, take ave of Ct among those \<40
 
 
 ```{r, echo=F}
-clean_pcr <- clean_pcr()
+clean_pcr <- clean_pcr_fun()
 ```
 
 
@@ -75,7 +75,7 @@ abline(h=40, v=40, col='gray', lty=2)
 
 piaB
 
-```{r, fig.width=4, fig.height=8}
+```{r, fig.width=8, fig.height=8}
 piab.plot <- heat.fun(target='piab')
 
 # breakslist<-seq(15,45,by=1)
@@ -190,7 +190,7 @@ s1 <- s1_data$survey_and_pcr_s1 %>%
   select(ID, time, Household, lyta, piab,activities, activity_family, activity_friends, activity_community_center, acitivity_fitness,child_contact,child_contact_u12m,child_contact_13_23m,child_contact_24_59m ,child_contact_5_10y,child_contact_over10y , Age, Gender, Race, Ethnicity)
 
 s2 <- s2_data$survey_and_pcr_s2  %>%
-  select(ID, time, Household, lyta, piab,activities, activity_family, activity_friends, activity_community_center, acitivity_fitness,child_contact, child_contact_u12m,child_contact_13_23m,child_contact_24_59m ,child_contact_5_10y,child_contact_over10y,, Age, Gender, Race, Ethnicity )
+  select(ID, time, Household, lyta, piab,activities, activity_family, activity_friends, activity_community_center, acitivity_fitness,child_contact, child_contact_u12m,child_contact_13_23m,child_contact_24_59m ,child_contact_5_10y,child_contact_over10y, Age, Gender, Race, Ethnicity )
 
 ds.c <- bind_rows(s1, s2) %>%
   mutate(season= str_extract(ID, "[^_]+"), 
@@ -239,10 +239,14 @@ Rate of contacts by season
 ds.c %>%
   group_by(season) %>%
   filter(child_contact %in% c(0,1)) %>%
+  mutate(child_contact_u12m = if_else(child_contact_u12m==9999,NA_real_,child_contact_u12m),
+         child_contact_13_23m = if_else(child_contact_13_23m==9999,NA_real_,child_contact_13_23m),
+         child_contact_u12m = if_else(child_contact_u12m==9999,NA_real_,child_contact_u12m)
+         ,child_contact_24_59m = if_else(child_contact_24_59m==9999,NA_real_,child_contact_24_59m)
+         ,child_contact_5_10y = if_else(child_contact_5_10y==9999,NA_real_,child_contact_5_10y)) %>%
   summarize(pct_child_contact= mean(child_contact, na.rm=T),  
             pct_child_contact_u12m= mean(child_contact_u12m, na.rm=T),
             pct_child_contact_u13_23m= mean(child_contact_13_23m, na.rm=T),
-            pct_child_contact_u12m= mean(child_contact_u12m, na.rm=T),
             pct_child_contact_24_5m= mean(child_contact_24_59m, na.rm=T),
             pct_child_contact_5_10y= mean(child_contact_5_10y, na.rm=T),
             n_test=n())
