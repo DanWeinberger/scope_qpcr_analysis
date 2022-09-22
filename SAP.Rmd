@@ -79,6 +79,6 @@ msm.mod1 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = li
 
 ## Notes and challenges
 
--   The analyses will all be done initially based on piaB positivity. Given the low rate of carriage in adults, this is probably fine to assume that if a person is positive at multiple time points, or multiple people in the household are positive, it is the same serotype. (the former has been confirmed--we have 1 person positive for 15B/C at all time points)
+-   The analyses will all be done initially based on piaB positivity. Given the low rate of carriage in adults, this is probably fine to assume that if a person is positive at multiple time points, or multiple people in the household are positive, it is the same serotype. (the former has been confirmed--we have 1 person positive for 15B/C at all time points). Once serotype data are available, we can more precisely define duration and transmission, if there is discordance within individuals or households
 
 -   The evaluations of household transmission are likely underpowered due to low levels of carriage and the fact that when one household member is positive, the other individual is often also positive at the same time point.
