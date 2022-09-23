@@ -246,8 +246,8 @@ q4 <- merge(q3, key2, by.x="MRN_cleaned", by.y= "mr_clean" , all.x=T)
 
 q4$flag_id <- is.na(q4$`ID Number`)
 
-s1_demographics$ID <- as.numeric(s1_demographics$ID)
-q4 <- merge(q4, s1_demographics, by.x="ID Number", by.y='ID', all=T)
+#s1_demographics$ID <- as.numeric(s1_demographics$ID)
+#q4 <- merge(q4, s1_demographics, by.x="ID Number", by.y='ID', all=T)
 
 #age1 <- read_excel('./Data/confidential/AGE Scope Participants samples pick-up 06-15-2021.xlsx', skip=1)
 
@@ -353,32 +353,6 @@ e3$education <- tolower(e3$education)
 e3$height <- gsub(' ', '', e3$height)
 ## export
 
-id.ages <- unique(e3[,c('ID','Age')])
-id.ages <- id.ages[!is.na(id.ages$Age),]
-
-exp1 <- e3[,c('ID','time','piab', 'lyta','Household','MRN_cleaned', 'education','ethnicity',"hh_relationship"  ,        "relationship_duration","pneu_vax_dic" ,"pneu_vax_date" ,"weight", "height","pos_covid_past" ,          "pos_covid_date","smoke_dic", "contact_children" ,       
-              "age_child_contacts"  ,     "frequency_child_contacts" ,"time_day_child_contacts" )]
-
-baseline.chars <- exp1[,c('ID','Household', 'education','ethnicity',"hh_relationship"  ,        "relationship_duration","pneu_vax_dic" ,"pneu_vax_date" ,"weight", "height","pos_covid_past" ,          "pos_covid_date","smoke_dic")]
-
-baseline.chars <- baseline.chars %>%
-  group_by(ID) %>%
-  mutate(smoke_dic= max(smoke_dic, na.rm=T))
-
-baseline.chars <- baseline.chars %>%
-  group_by(ID) %>%
-  mutate(repN=row_number())
-baseline.chars <- baseline.chars[baseline.chars$repN==1,]
-baseline.chars$repN <- NULL
-
-exp2 <- merge(id.ages, exp1[c('ID','time','piab', 'lyta',"contact_children" ,       
-                              "age_child_contacts"  ,     "frequency_child_contacts" ,"time_day_child_contacts")], by='ID', all.y=T)
-
-exp3 <- merge(exp2,baseline.chars, by='ID', all.x=T )
-exp3 <- exp3[order(exp3$ID, exp3$time),]
-
-write.csv(exp3,'./Data/Confidential/export_pfizer.csv')
-
 e3$month <- month(e3$visit_date_cleaned)
 
 
@@ -430,7 +404,54 @@ e3$acitivity_fitness <- 0
 e3$acitivity_fitness[e3$social_activity_type=='Fitness activities'] <- 1
 e3$acitivity_fitness[is.na(e3$social_activity_type)] <- 9999
 
+#child_contact_often,child_contact_hours
+#these two variables often had coding switched so combine
+e3$child_combined <- paste(e3$frequency_child_contacts, e3$time_day_child_contacts)
+e3 <- e3 %>%
+  filter(!is.na(Household)) %>%
+  mutate( idN = as.numeric(gsub('S1_','', ID)),
+    child_contact_hours = if_else(grepl('<4',child_combined),1,
+                               if_else(grepl('4-8',child_combined),2,
+                               if_else(grepl('8+',child_combined),3,999))),
+         child_contact_often = if_else(grepl('Daily',child_combined),1,
+                                       if_else(grepl('Every few',child_combined),2,
+                                               if_else(grepl('Once or twice',child_combined),3,999))),
+         
+         )
+
+s1_demographics$ID <- as.numeric(s1_demographics$ID)
+e3 <- merge(e3, s1_demographics, by.x="idN", by.y='ID', all=T)
+
+
+id.ages <- unique(e3[,c('ID','Age')])
+id.ages <- id.ages[!is.na(id.ages$Age),]
+
+exp1 <- e3[,c('ID','time','piab', 'lyta','Household','MRN_cleaned', 'education','ethnicity',"hh_relationship"  ,        "relationship_duration","pneu_vax_dic" ,"pneu_vax_date" ,"weight", "height","pos_covid_past" ,          "pos_covid_date","smoke_dic", "contact_children" ,       
+              "age_child_contacts"  ,     "frequency_child_contacts" ,"time_day_child_contacts" )]
+
+baseline.chars <- exp1[,c('ID','Household', 'education','ethnicity',"hh_relationship"  ,        "relationship_duration","pneu_vax_dic" ,"pneu_vax_date" ,"weight", "height","pos_covid_past" ,          "pos_covid_date","smoke_dic")]
+
+baseline.chars <- baseline.chars %>%
+  group_by(ID) %>%
+  mutate(smoke_dic= max(smoke_dic, na.rm=T))
+
+baseline.chars <- baseline.chars %>%
+  group_by(ID) %>%
+  mutate(repN=row_number())
+baseline.chars <- baseline.chars[baseline.chars$repN==1,]
+baseline.chars$repN <- NULL
+
+exp2 <- merge(id.ages, exp1[c('ID','time','piab', 'lyta',"contact_children" ,       
+                              "age_child_contacts"  ,     "frequency_child_contacts" ,"time_day_child_contacts")], by='ID', all.y=T)
+
+exp3 <- merge(exp2,baseline.chars, by='ID', all.x=T )
+exp3 <- exp3[order(exp3$ID, exp3$time),]
+
+write.csv(exp3,'./Data/Confidential/export_pfizer.csv')
+
+
 actitivity_summary <- e3 %>%
+  filter(!is.na(ID) & activities!=9999) %>%
   group_by(ID) %>%
   summarize(soc_activity= max(activities, na.rm=T) ,
             soc_activity_family= max(activity_family, na.rm=T) ,

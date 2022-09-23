@@ -8,16 +8,23 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
+
+library(dplyr)
+options(dplyr.summarise.inform = FALSE)
+library(ggplot2)
+library(ggalluvial)
+library(kableExtra)
+library(knitr)
 ```
 
 ## Overview
 
-The SCOPE study enrolled adults 60 years of age and older in greater New Haven over the course of 2 years (October 2020-September 2022). Individuals were followed longitudinally over a 10 week period (6 visits, 2 weeks apart). At ech study visit, individuals provided a saliva sample, and at the final visit, they provided a urine sample. They also completed a questionnaire about their activities and contacts with others. A unique aspect of this study is that subjects were enrolled as pairs living in the same household, and these two people were the only members of te household.
+The SCOPE study enrolled adults 60 years of age and older in greater New Haven over the course of 2 years (October 2020-September 2022). Individuals were followed longitudinally over a 10 week period (6 visits, 2 weeks apart). At each study visit, individuals provided a saliva sample, and at the final visit, they provided a urine sample. They also completed a questionnaire about their activities and contacts with others. A unique aspect of this study is that subjects were enrolled as pairs living in the same household, and these two people were the only members of te household.
 
 ## Study objectives
 
-The goals of the study are to quantify the acquistion and clearance rates of pneumococcus among older adults living in a community setting, to identify risk factors for colonization, and to quantify within-household transmission of pneumococcus.
+The goals of the study are to quantify the acquisition and clearance rates of pneumococcus among older adults living in a community setting, to identify risk factors for colonization, and to quantify within-household transmission of pneumococcus.
 
 ## Laboratory methods
 
@@ -27,23 +34,453 @@ In the laboratory, saliva was culture enriched and tested for *lytA* and *piaB w
 
 ### Descriptive statistics
 
--   Percent of tests that were positive, overall and by year
+```{r}
+pcr_summary_long <- readRDS('./Data/PCR_compiled.rds')
+
+pcr_survey <- readRDS('./Data./pcr_survey_combined.rds') %>%
+  mutate(Gender = if_else(Gender %in% c('F','Female'),'F',Gender),
+         Gender = if_else(Gender %in% c('M','Male'),'M',Gender)) %>%
+  filter(piab != 9999) %>%
+  mutate(piab_pos = if_else(piab < 40,1,0),
+         lyta_pos = if_else(lyta < 40,1,0), 
+         season=substr(ID,1,2),
+          Gender=if_else(ID=='S2_77' & is.na(Gender), 'F',Gender))
+```
+
+-   lytA vs piaB Ct values
+
+```{r}
+
+p1 <- ggplot(pcr_summary_long,aes(x=lyta, y=piab, alpha=0.5))+
+  theme_classic() +
+  geom_point() +
+  ylim(45,10) +
+  xlim(45,10)+ 
+  xlab('lytA') +
+  ylab('piaB') +
+  theme(legend.position = "none") +
+  geom_abline(col='gray', lty=2) +
+  geom_hline(yintercept=40,col='gray', lty=3)+
+  geom_vline(xintercept=40,col='gray', lty=3)
+
+p1
+
+```
+
+-   Percent of tests that were positive, overall
+
+```{r}
+
+t1 <- pcr_summary_long %>%
+  filter(piab != 9999) %>%
+  mutate(piab_pos = if_else(piab < 40,1,0),
+         lyta_pos = if_else(lyta < 40,1,0)) %>%
+  summarize(N_piaB= sum(piab_pos), N_test= n(), `Percent piab`=round(mean(piab_pos)*100,2) )
+
+kable(t1)
+```
+
+      - and by year
+
+```{r}
+
+t2 <- pcr_summary_long %>%
+  filter(piab != 9999) %>%
+  mutate(piab_pos = if_else(piab < 40,1,0),
+         lyta_pos = if_else(lyta < 40,1,0), season=substr(ID,1,2)) %>%
+  group_by(season) %>%
+  summarize(N_piaB= sum(piab_pos), N_test= n(), Pct_piab=round(mean(piab_pos)*100,1) )
+
+kable(t2)
+```
 
 -   Percent of people who were positive (period prevalence)
 
+```{r}
+t3 <- pcr_summary_long %>%
+  filter(piab != 9999) %>%
+  mutate(piab_pos = if_else(piab < 40,1,0),
+         lyta_pos = if_else(lyta < 40,1,0),
+         season=substr(ID,1,2) ) %>%
+  group_by(ID,season) %>%
+  summarize(any_pos_piab = max(piab_pos)) %>%
+  ungroup() %>%
+  group_by(season) %>%
+  summarize(N_people=n(), N_pos=sum(any_pos_piab), `Percent Positive People`=round(100*mean(any_pos_piab),1))
+
+kable(t3)
+```
+
 -   Percent of households that were positive
 
+    ```{r}
+t4 <-     pcr_summary_long %>%
+      filter(piab != 9999) %>%
+      mutate(piab_pos = if_else(piab < 40,1,0),
+             lyta_pos = if_else(lyta < 40,1,0),
+             season=substr(ID,1,2) ) %>%
+      group_by(Household,season) %>%
+      summarize(any_pos_piab = max(piab_pos)) %>%
+      ungroup() %>%
+      group_by(season) %>%
+      summarize(N_households=n(), N_pos=sum(any_pos_piab), `Percent Positive HH`=round(100*mean(any_pos_piab),1))
+    
+kable(t4)    
+```
+
 -   Percent positive and average Ct, by sex
+
+```{r}
+t5 <- pcr_survey %>%
+  group_by(Gender,season) %>%
+  summarize(N_piaB= sum(piab_pos), N_test= n(), Pct_piab=round(mean(piab_pos)*100,1) )
+
+kable(t5) %>%
+   pack_rows(index = table(t5$Gender))
+```
 
 -   Percent positive by calendar month
 
 -   Percent of individuals with contacts, by age of contacts
 
+    Activity with family?
+
+```{r}
+t6 <- pcr_survey %>%
+  filter(activity_family!=9999) %>%
+  group_by( Gender, season) %>%
+  summarize(N_Activity_family=sum(activity_family, na.rm=T), N=n(), Pct=round(100*mean(activity_family, na.rm=T),2))
+
+kable(t6) # %>%
+     #group_rows(index = table(t6$Gender))
+
+```
+
+contact <5 years 
+
+```{r}
+t7 <-pcr_survey %>%
+  filter(child_contact_u12m!=9999) %>%
+  group_by( Gender,season) %>%
+  mutate(child_contact_u5 = if_else( (child_contact_u12m==1 |child_contact_13_23m==1 | child_contact_24_59m==1),1,0   )) %>%
+  summarize(N_contact_u5=sum(child_contact_u5, na.rm=T), N=n(), Pct=round(100*mean(child_contact_u5, na.rm=T),2))
+
+kable(t7)
+```
+
+Child contact <12 m 
+
+```{r}
+t8 <- pcr_survey %>%
+  filter(child_contact_u12m!=9999) %>%
+  group_by( Gender,season) %>%
+    summarize(N_contact_u12m=sum(child_contact_u12m, na.rm=T), N=n(), Pct=round(100*mean(child_contact_u12m, na.rm=T),1))
+
+kable(t8)
+```
+Child contact 12-23m
+
+```{r}
+t9 <- pcr_survey %>%
+  filter(child_contact_13_23m!=9999) %>%
+  group_by(Gender,season) %>%
+    summarize(N_contact_12_23m=sum(child_contact_13_23m, na.rm=T), N=n(), Pct=round(100*mean(child_contact_13_23m, na.rm=T),2))
+
+kable(t9)
+```
+
+Child contact 24-59 m
+
+```{r}
+t10 <- pcr_survey %>%
+  filter(child_contact_24_59m!=9999) %>%
+  group_by( Gender, season) %>%
+    summarize(N_contact_24_59m=sum(child_contact_24_59m, na.rm=T), N=n(), Pct=round(100*mean(child_contact_24_59m, na.rm=T),2))
+
+kable(t10)
+```
+Child contact 5-9y
+```{r}
+t11 <- pcr_survey %>%
+  filter(child_contact_5_10y!=9999) %>%
+  group_by(Gender, season) %>%
+    summarize(N_contact_5_9y=sum(child_contact_5_10y, na.rm=T), N=n(), Pct=round(100*mean(child_contact_5_10y, na.rm=T),2))
+
+t11
+```
+
+Child contact >10y
+
+```{r}
+t12 <- pcr_survey %>%
+  filter(child_contact_over10y!=9999) %>%
+  group_by( Gender,season) %>%
+    summarize(N_contact_10y_older=sum(child_contact_over10y, na.rm=T), N=n(), Pct=round(100*mean(child_contact_over10y, na.rm=T),2))
+
+kable(t12)
+```
+How does intensity of child contact vary by season
+
+0= none reported, 1=Daily; 2=every few days; 3= once or twice a month
+```{r}
+t13 <-  pcr_survey %>%
+  filter(child_contact != 9999) %>% #must answer question...lots of missing surveys in S1
+  mutate(child_contact_often = if_else(is.na(child_contact_often) |child_contact_often==999,0,child_contact_often) ) %>%
+  group_by(Gender, season,child_contact_often ) %>%
+  summarize(N=n()) %>%
+  ungroup() %>%
+  group_by(Gender,season) %>%
+  mutate(Percent= round(100*N/sum(N),2))
+
+kable(t13) %>%
+     pack_rows(index = table(t13$Gender))
+
+```
+
+```{r, fig.width=4, fig.height=2}
+d1 <- t13 %>%
+  filter( child_contact_often !=999) %>%
+  mutate(season= as.factor(season) , Gender=as.factor(Gender), child_contact_often=factor(child_contact_often,levels=c('0','1','2','3'), labels=c('None','Daily','Every few days','Few times/month') ))
+
+d1.c <- dcast(d1, Gender + season ~child_contact_often ,value.var='Percent' )
+
+d1.m <- melt(d1.c, id.vars=c('Gender','season')) %>%
+  mutate(value= if_else(is.na(value),0, value))
+
+ggplot(d1.m, aes(x=season, stratum=variable,alluvium=variable,fill=variable,label=variable, y = value)) +
+  scale_fill_brewer(type = "qual", palette = "Set2") +
+  geom_flow(stat = "alluvium", lode.guidance = "frontback",
+            color = "darkgray") +
+  theme_classic()  +
+  facet_wrap(~Gender)
+```
+
+Just among those who have contact with kids 1-10y
+```{r}
+t13a <-  pcr_survey %>%
+  filter(child_contact_13_23m==1 | child_contact_24_59m==1 | child_contact_5_10y==1) %>% #must answer question...lots of missing surveys in S1
+  mutate(child_contact_often = if_else(is.na(child_contact_often) |child_contact_often==999,0,child_contact_often) ) %>%
+  group_by(Gender, season,child_contact_often ) %>%
+  summarize(N=n()) %>%
+  ungroup() %>%
+  group_by(Gender,season) %>%
+  mutate(Percent= round(100*N/sum(N),2))
+
+d1 <- t13a %>%
+  mutate(season= as.factor(season) , Gender=as.factor(Gender), child_contact_often=factor(child_contact_often,levels=c('0','1','2','3'), labels=c('Missing','Daily','Every few days','Few times/month') ))
+
+d1.c <- dcast(d1, Gender + season ~child_contact_often ,value.var='Percent' )
+
+d1.m <- melt(d1.c, id.vars=c('Gender','season')) %>%
+  mutate(value= if_else(is.na(value),0, value))
+
+ggplot(d1.m, aes(x=season, stratum=variable,alluvium=variable,fill=variable,label=variable, y = value)) +
+  scale_fill_brewer(type = "qual", palette = "Set2") +
+  geom_flow(stat = "alluvium", lode.guidance = "frontback",
+            color = "darkgray") +
+  theme_classic()  +
+  facet_wrap(~Gender) + 
+  ggtitle('Frequency of contacts with 1-10y')
+```
+
+Hours with kids?
+1= < 4 hours (just a morning or afternoon or evening) 
+2= 4-8 hours (full day) 
+3= 8+ hours (longer visit such as day care or overnight)
+
+```{r}
+t14  <- pcr_survey %>%
+ filter(child_contact != 9999) %>% #must answer question...lots of missing surveys in S1 %>%
+    mutate(child_contact_hours = if_else(is.na(child_contact_hours) |child_contact_hours==999,0,child_contact_hours) ) %>%
+
+  group_by(Gender, season,child_contact_hours ) %>%
+  summarize(N=n()) %>%
+  ungroup() %>%
+  group_by(Gender,season) %>%
+  mutate(Percent= round(100*N/sum(N),2)) %>%
+  ungroup()
+
+kable(t14) %>%
+     pack_rows(index = table(t14$Gender))
+```
+
+```{r, fig.width=4, fig.height=2}
+d1 <- t14 %>%
+  filter(child_contact_hours !=999) %>%
+  mutate(season= as.factor(season) , Gender=as.factor(Gender), child_contact_hours=factor(child_contact_hours,levels=c('0','1','2','3'), labels=c('None','<4h','4-8h','>8h') ))
+
+d1.c <- dcast(d1, Gender + season ~child_contact_hours ,value.var='Percent' )
+
+d1.m <- melt(d1.c, id.vars=c('Gender','season')) %>%
+  mutate(value= if_else(is.na(value),0, value))
+
+ggplot(d1.m, aes(x=season, stratum=variable,alluvium=variable,fill=variable,label=variable, y = value)) +
+  scale_fill_brewer(type = "qual", palette = "Set2") +
+  geom_flow(stat = "alluvium", lode.guidance = "frontback",
+            color = "darkgray") +
+  theme_classic()  +
+  facet_wrap(~Gender)
+```
+
+
+```{r}
+t14a  <- pcr_survey %>%
+ filter(child_contact_13_23m==1 | child_contact_24_59m==1 | child_contact_5_10y==1) %>% #must answer question...lots of missing surveys in S1 %>%
+    mutate(child_contact_hours = if_else(is.na(child_contact_hours) |child_contact_hours==999,0,child_contact_hours) ) %>%
+
+  group_by(Gender, season,child_contact_hours ) %>%
+  summarize(N=n()) %>%
+  ungroup() %>%
+  group_by(Gender,season) %>%
+  mutate(Percent= round(100*N/sum(N),2)) %>%
+  ungroup()
+
+d1 <- t14a %>%
+  filter(child_contact_hours !=999) %>%
+  mutate(season= as.factor(season) , Gender=as.factor(Gender), child_contact_hours=factor(child_contact_hours,levels=c('0','1','2','3'), labels=c('Missing','<4h','4-8h','>8h') ))
+
+d1.c <- dcast(d1, Gender + season ~child_contact_hours ,value.var='Percent' )
+
+d1.m <- melt(d1.c, id.vars=c('Gender','season')) %>%
+  mutate(value= if_else(is.na(value),0, value))
+
+ggplot(d1.m, aes(x=season, stratum=variable,alluvium=variable,fill=variable,label=variable, y = value)) +
+  scale_fill_brewer(type = "qual", palette = "Set2") +
+  geom_flow(stat = "alluvium", lode.guidance = "frontback",
+            color = "darkgray") +
+  theme_classic()  +
+  facet_wrap(~Gender) +
+  ggtitle('Intensity of contact ith kids 1-10y')
+
+```
+
+-   Does probability of both people being positive differ by season? 
+
+0= neither positive; 1= 1 person positive, 2=both positive
+
+```{r}
+
+t18 <- pcr_survey %>%
+  group_by(time, Household, season) %>%
+  summarize(N_pos_time=sum(piab_pos)) %>%
+  ungroup() %>%
+  group_by( season,N_pos_time) %>%
+  summarize(N=n())
+
+t18
+```
+
 -   Proportion positive, stratified by contacts
 
     -   Contact with children \<5 years
+    
+Between seasons, among people without reported child contact, prevalence is much lower; it is similar among those with a reported contact
+
+```{r}
+t16  <- pcr_survey %>%
+  mutate(child_contact_u5 = if_else( (child_contact_u12m==1 |child_contact_13_23m==1 | child_contact_24_59m==1),1,0   ),
+         child_contact_u5= if_else(is.na(child_contact_u12m)| child_contact_u12m==9999,9999,child_contact_u5)) %>%
+  group_by( child_contact_u5, season ) %>%
+  summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
+
+kable(t16) %>%
+     pack_rows(index = table(t16$child_contact_u5))
+```
+    
 
     -   Contact with children \<1 year, 1-2 years, 2-4 years, 5-9 years, 10 years and older
+    
+    <12m
+```{r}
+t16  <- pcr_survey %>%
+  group_by( child_contact_u12m, season ) %>%
+  summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
+
+kable(t16) %>%
+     pack_rows(index = table(t16$child_contact_u12m))
+```
+
+12-23m
+```{r}
+t16  <- pcr_survey %>%
+  group_by( child_contact_13_23m, season ) %>%
+  summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
+
+kable(t16) %>%
+     pack_rows(index = table(t16$child_contact_13_23m))
+```
+
+```{r}
+t16  <- pcr_survey %>%
+  group_by( child_contact_24_59m, season ) %>%
+  summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
+
+kable(t16) %>%
+     pack_rows(index = table(t16$child_contact_24_59m))
+```
+
+```{r}
+t16  <- pcr_survey %>%
+  group_by( child_contact_5_10y, season ) %>%
+  summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
+
+kable(t16) %>%
+     pack_rows(index = table(t16$child_contact_5_10y))
+```
+
+```{r}
+t16  <- pcr_survey %>%
+  group_by( child_contact_over10y, season ) %>%
+  summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
+
+kable(t16) %>%
+     pack_rows(index = table(t16$child_contact_over10y))
+```
+intensity of contact
+```{r}
+t17  <- pcr_survey %>%
+  mutate(child_contact_hours= if_else(is.na(child_contact_hours),999,child_contact_hours)) %>%
+  group_by( child_contact_hours ) %>%
+  summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
+
+kable(t17) 
+
+```
+
+frequency of contact vs pneumo positivity
+
+```{r}
+t17  <- pcr_survey %>%
+  mutate(child_contact_often= if_else(is.na(child_contact_often),999,child_contact_often)) %>%
+  group_by( child_contact_often ) %>%
+  summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
+
+kable(t17) 
+
+```
+
+Prevalence by sex. Seems that men and women had similar prevalence in Season 1; Women had similar prevalence again in Season 2, men had very little carriage.
+
+```{r}
+t16  <- pcr_survey %>%
+   group_by( Gender, season ) %>%
+  summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
+
+kable(t16) %>%
+     pack_rows(index = table(t16$Gender))
+```
+Prevalence by sex and child contact (small numbers)
+
+```{r}
+t16  <- pcr_survey %>%
+  mutate(child_contact_u10 = if_else( (child_contact_u12m==1 |child_contact_13_23m==1 | child_contact_24_59m==1 | child_contact_5_10y==1),1,0   ),
+         child_contact_u10= if_else(is.na(child_contact_u12m)| child_contact_u12m==9999,9999,child_contact_u10)) %>%
+  group_by( child_contact_u10,Gender, season ) %>%
+  summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
+
+kable(t16) %>%
+     pack_rows(index = table(t16$child_contact_u10))
+```
 
     -   Test with Fisher's Exact Test (p\<0.05)
 
