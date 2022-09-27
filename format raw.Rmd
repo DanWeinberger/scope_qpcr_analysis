@@ -202,9 +202,13 @@ s2 <- s2_data$survey_and_pcr_s2  %>%
 
 ds.c <- bind_rows(s1, s2) %>%
   mutate(season= str_extract(ID, "[^_]+"), 
-         piab_pos=1*(piab<45))
+         piab_pos=1*(piab<45) ,
+         Age=round(Age)) %>%
+  filter(!is.na(ID))
 
 #Missing gender: S1_1, S1_11, S1_12, S1_18, S1_19, S1_2, S1_21, S1_28, S1_29, S1_3, S1_34, S1_35, S1_37, S1_4, s1_44, S1_45, s1_5, S1_6, s1_60, s1_61, S1_62, S1_63, s2_77
+
+write.csv(ds.c,'./Data/pcr_survey_combined.csv')
 
 saveRDS(ds.c,'./Data/pcr_survey_combined.rds')
 ```
