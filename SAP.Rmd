@@ -19,6 +19,7 @@ library(kableExtra)
 library(knitr)
 library(reshape2)
 library(flextable)
+library(msm)
 ```
 
 ## Overview
@@ -146,7 +147,7 @@ flextable(t5)
 
 ```{r}
 t5 <- pcr_survey %>%
-  group_by(recent_nasal,season) %>%
+  group_by(recent_nasal) %>%
   summarize(N_piaB= sum(piab_pos), N_test= n(), Pct_piab=round(mean(piab_pos)*100,1) )
 
 t5 <- as_grouped_data(x = t5, groups = c("recent_nasal"), columns = NULL)
@@ -156,7 +157,7 @@ flextable(t5)
 
 ```{r}
 t5 <- pcr_survey %>%
-  group_by(recent_runny_nose,season) %>%
+  group_by(recent_runny_nose) %>%
   summarize(N_piaB= sum(piab_pos), N_test= n(), Pct_piab=round(mean(piab_pos)*100,1) )
 
 t5 <- as_grouped_data(x = t5, groups = c("recent_runny_nose"), columns = NULL)
@@ -168,7 +169,7 @@ Recent Abx
 
 ```{r}
 t5 <- pcr_survey %>%
-  group_by(recent_abx,season) %>%
+  group_by(recent_abx) %>%
   summarize(N_piaB= sum(piab_pos), N_test= n(), Pct_piab=round(mean(piab_pos)*100,1) )
 
 t5 <- as_grouped_data(x = t5, groups = c("recent_abx"), columns = NULL)
@@ -562,6 +563,18 @@ Evaluate correlates of pneumococcal positivity.
 
 ```{r, echo=T, eval=F}
         mod1 <- glm(piab_pos ~ child_contact_u12m + child_contact_13_23m + child_contact_24_59m + child_contact_5_10y + child_contact_over10y , family='binomial', data=pcr_survey)
+
+summary(mod1)
+```
+
+
+```{r}
+pcr_survey$child_contact_hours <- as.factor(pcr_survey$child_contact_hours)
+
+pcr_survey$child_contact_often <- as.factor(pcr_survey$child_contact_often)
+
+
+     mod1 <- glm(piab_pos ~ child_contact_hours + child_contact_often , family='binomial', data=pcr_survey)
 summary(mod1)
 ```
 
@@ -635,6 +648,7 @@ msm.mod1d
 
 Does duration or acquisition rate vary by sex? No.
 ```{r}
+
 msm.mod2a <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ Gender))
 msm.mod2a
 
