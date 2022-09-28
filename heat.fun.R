@@ -7,7 +7,7 @@ ds1$piab[ds1$piab==9999] <- NA
 
 breakslist<-seq(cut1,cut2,by=1)
 
-weeks<- paste0('Week ', 1:6) 
+weeks<- paste0('Week ', c(0,2,4,6,8,10)) 
 
 ds1$season <- substr(ds1$ID,1,2)
 ds1$seasonid <- as.numeric(substring(ds1$ID, 4))

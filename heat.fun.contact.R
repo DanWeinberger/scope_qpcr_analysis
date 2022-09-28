@@ -3,7 +3,7 @@ heat.fun.contact <- function(ds=q3.c, cut3=47){
 ds1 <- ds[,c('1','2','3','4','5','6')]
 ds1[ds1==9999] <- NA
 
-weeks<- paste0('Week ', 1:6) 
+weeks<- paste0('Week ', c(0,2,4,6,8,10)) 
 
 house <- ds$Household
 sampleID <- ds$ID
