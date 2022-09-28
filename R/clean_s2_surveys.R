@@ -67,7 +67,11 @@ s2_a <- merge(s2_a,s2_demographics, by='ID', all=T)
 
 s2_a <- s2_a %>%
   group_by(ID, time) %>%
-  mutate(repN=row_number()) %>%
+  mutate(repN=row_number(),
+         recent_pneumo_vax = if_else(vaccines_new==3, 1, 0),
+         recent_flu_vax = if_else(vaccines_new==2, 1, 0),
+         recent_covid_vax = if_else(vaccines_new==4, 1, 0)
+         )%>%
   filter(repN==1 & !is.na(Household)) %>%
   ungroup()
 
