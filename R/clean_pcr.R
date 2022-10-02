@@ -197,9 +197,8 @@ d1.a <- acast(c1.m[,c('ID','Target','time','ct_pos2','Household')], Target ~ ID 
 d1.ds <- reshape2::dcast(c1.m[,c('ID','Target','time','ct_pos2','Household')],   Household +ID+ time ~ Target, fun.aggregate=min, na.rm=T, fill=9999, value.var = 'ct_pos2')
 
 d1.ds <- d1.ds %>%
-  group_by(Household ,time) %>%
-  arrange(ID) %>%
-  mutate(HH_order=row_number() ) %>%
+  group_by(Household ) %>%
+  mutate(HH_order= as.numeric(as.factor(ID))) %>%
   ungroup()
 saveRDS(d1.ds, './data/PCR_compiled.rds')
 

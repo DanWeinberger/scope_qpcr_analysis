@@ -5,6 +5,9 @@ ds1 <- clean_pcr$clean_pcr
 ds1$lyta[ds1$lyta==9999] <- NA
 ds1$piab[ds1$piab==9999] <- NA
 
+ds1 <- ds1 %>%
+  filter(ID !='S2_NA')
+
 breakslist<-seq(cut1,cut2,by=1)
 
 weeks<- paste0('Week ', c(0,2,4,6,8,10)) 
@@ -24,6 +27,9 @@ ds1 <- ds1 %>%
 
 
 ds.plot <- dcast(ds1, house+sampleID + season + seasonid + seasonhh +HH_order~time, value.var = target)
+
+ds.plot <- ds.plot %>%
+  filter(!is.na(seasonid))
 
 ds.plot$labels <- paste(ds.plot$season, ds.plot$seasonid, sep='_')
 sub1 <- ds.plot[1:cut3,] 
