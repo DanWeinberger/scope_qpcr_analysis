@@ -1,6 +1,10 @@
 ##Clean S2 surveys
 library(dplyr)
 
+#84.3,84.4,84.5,84.6.The participants were at the hospital at the time to produce saliva.
+#Participants 55.3,53.2,56.3 they couldn’t produce saliva.
+#ID 37,38 no participants was attribute to that household.
+
 clean_s2_surveys <- function(){
 s2_surv <- read.csv('./Data/confidential/Season_2_Surveys/fornightly_DATA_2022-09-19.csv') %>%
   rename(scope_id=participant_id, 
