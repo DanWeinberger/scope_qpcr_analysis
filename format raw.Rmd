@@ -75,7 +75,7 @@ abline(h=40, v=40, col='gray', lty=2)
 
 piaB
 
-```{r, fig.width=5, fig.height=5}
+```{r, fig.width=8, fig.height=8}
 piab.plot <- heat.fun(target='piab')
 
 # breakslist<-seq(15,45,by=1)
@@ -98,7 +98,7 @@ piab.plot <- heat.fun(target='piab')
 
 lytA
 
-```{r, fig.width=4, fig.height=8}
+```{r, fig.width=8, fig.height=8}
 
 lyta.plot <- heat.fun(target='lyta')
 

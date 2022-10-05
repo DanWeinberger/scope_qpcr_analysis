@@ -70,49 +70,51 @@ b1$carr_prop <- b1$carr_est/sum(b1$carr_est)
 
 setup to merge with pneumostrip
 ```{r}
-b1$st_merge <- b1$serotype
+c1 <- b1
 
-b1$st_merge[b1$serotype %in% c('10A','10F','10B','10C')] <- '10A/B/F/C'
+c1$st_merge <- c1$serotype
 
-b1$st_merge[b1$serotype %in% c('11A','11D','11B','11C', '11F')] <- '11A/D/B/C/F'
+c1$st_merge[c1$serotype %in% c('10A','10F','10B','10C')] <- '10A/B/F/C'
 
-b1$st_merge[b1$serotype %in% c('12A','46','12F','12B', '44')] <- '12A/46/B/F/44'
+c1$st_merge[c1$serotype %in% c('11A','11D','11B','11C', '11F')] <- '11A/D/B/C/F'
 
-b1$st_merge[b1$serotype %in% c('15A','15F')] <- '15A/F'
+c1$st_merge[c1$serotype %in% c('12A','46','12F','12B', '44')] <- '12A/46/B/F/44'
 
-b1$st_merge[b1$serotype %in% c('15B','15C')] <- '15B/C'
+c1$st_merge[c1$serotype %in% c('15A','15F')] <- '15A/F'
 
-b1$st_merge[b1$serotype %in% c('18A','18B', '18C', '18F')] <- '18A/B/C/F'
+c1$st_merge[c1$serotype %in% c('15B','15C')] <- '15B/C'
 
-b1$st_merge[b1$serotype %in% c('19A', '19F')] <- '19A/F'
+c1$st_merge[c1$serotype %in% c('18A','18B', '18C', '18F')] <- '18A/B/C/F'
 
-b1$st_merge[b1$serotype %in% c('19B', '19C')] <- '19B/C'
+c1$st_merge[c1$serotype %in% c('19A', '19F')] <- '19A/F'
 
-b1$st_merge[b1$serotype %in% c('22F', '22A')] <- '22F/A'
+c1$st_merge[c1$serotype %in% c('19B', '19C')] <- '19B/C'
 
-b1$st_merge[b1$serotype %in% c('23B', '23F')] <- '23B/F'
+c1$st_merge[c1$serotype %in% c('22F', '22A')] <- '22F/A'
 
-b1$st_merge[b1$serotype %in% c('24A', '24B', '24F')] <- '24A/B/F'
+c1$st_merge[c1$serotype %in% c('23B', '23F')] <- '23B/F'
 
-b1$st_merge[b1$serotype %in% c('25A', '25F')] <- '25A/F'
+c1$st_merge[c1$serotype %in% c('24A', '24B', '24F')] <- '24A/B/F'
 
-b1$st_merge[b1$serotype %in% c('32A','32F')] <- '32A/F'
+c1$st_merge[c1$serotype %in% c('25A', '25F')] <- '25A/F'
 
-b1$st_merge[b1$serotype %in% c('33B','33D','33C')] <- '33B/D/C'
+c1$st_merge[c1$serotype %in% c('32A','32F')] <- '32A/F'
 
-b1$st_merge[b1$serotype %in% c('33F','33A')] <- '33F/A'
+c1$st_merge[c1$serotype %in% c('33B','33D','33C')] <- '33B/D/C'
 
-b1$st_merge[b1$serotype %in% c('35A','35C','35F','47F')] <- '35A/C/F/47F'
+c1$st_merge[c1$serotype %in% c('33F','33A')] <- '33F/A'
 
-b1$st_merge[b1$serotype %in% c('6A','6C','6D','6B', '6A/C')] <- '6A/C/D'
+c1$st_merge[c1$serotype %in% c('35A','35C','35F','47F')] <- '35A/C/F/47F'
 
-b1$st_merge[b1$serotype %in% c('7B','7C','40')] <- '7B/C/40'
+c1$st_merge[c1$serotype %in% c('6A','6C','6D','6B', '6A/C')] <- '6A/C/D'
 
-b1$st_merge[b1$serotype %in% c('7F','7A')] <- '7F/A'
+c1$st_merge[c1$serotype %in% c('7B','7C','40')] <- '7B/C/40'
 
-b1$st_merge[b1$serotype %in% c('9A','9V')] <- '9A/V'
+c1$st_merge[c1$serotype %in% c('7F','7A')] <- '7F/A'
 
-b1$st_merge[b1$serotype %in% c('9N','9L')] <- '9N/L'
+c1$st_merge[c1$serotype %in% c('9A','9V')] <- '9A/V'
+
+c1$st_merge[c1$serotype %in% c('9N','9L')] <- '9N/L'
 
 
 
@@ -158,11 +160,11 @@ fpr$fpr_any <- (fpr$fpr_lyta_pos + fpr$fpr_lyta_neg)/2
 ```
 
 ```{r}
-c1 <- merge(b1, fpr, by.x='st_merge', by.y='variable', all=T)
+d1 <- merge(c1, fpr, by.x='st_merge', by.y='variable', all=T)
 
-c1 <- c1[,c('st_merge','serotype','fpr_any','carr_prop')]
+d1 <- d1[,c('st_merge','serotype','fpr_any','carr_prop')]
 
-c1$carr_prop[is.na(c1$carr_prop)] <- min(c1$carr_prop, na.rm=T)
+d1$carr_prop[is.na(d1$carr_prop)] <- min(d1$carr_prop, na.rm=T)
 ```
 
 Probability of positive if detected
@@ -173,10 +175,10 @@ Estimate prevalence (C)
 ```{r}
 A=1
 
-c1$probability_pos <- (A*c1$carr_prop) /((A*c1$carr_prop) + (1-c1$carr_prop)*c1$fpr_any )
+d1$probability_pos <- (A*d1$carr_prop) /((A*d1$carr_prop) + (1-d1$carr_prop)*d1$fpr_any )
 
 
-res1 <- c1[,c('st_merge','serotype','probability_pos')]
+res1 <- d1[,c('st_merge','serotype','probability_pos')]
 
 res1 <- res1[order(-res1$probability_pos),]
 
@@ -187,8 +189,57 @@ write.csv(res1, './Data/pneumostrip_ranking.csv')
 
 
 
+## Same for qPCR
+
+```{r}
+qpcr_fpr <- read_excel('./Data/qpcr_multiplex/HCW_Mutliplex_masterfile .xlsx', sheet='fp_rate')
+
+g1 <- b1
+
+g1$st_merge <- g1$serotype
+
+g1$st_merge[g1$serotype %in% c('11A','11D','11E')] <- '11 ade'
+
+g1$st_merge[g1$serotype %in% c('12A','46','12F','12B', '44')] <- '12/44/46'
+
+g1$st_merge[g1$serotype %in% c('15B','15C')] <- '15 B/C'
+
+g1$st_merge[g1$serotype %in% c('23B', '23F')] <- '23FAB' #leave out 23A bc it is separate as well
+
+g1$st_merge[g1$serotype %in% c('33F','33A')] <- '33 a/f'
+
+g1$st_merge[g1$serotype %in% c('6A','6C','6D','6B', '6A/C')] <- '6abcd'
+
+g1$st_merge[g1$serotype %in% c('7F','7A')] <- '7f/a'
+
+g1$st_merge[g1$serotype %in% c('9A','9V')] <- '9 v/a'
+g1 <- g1%>%
+  select(carr_prop, st_merge, serotype)
+
+h1 <-  merge(g1, qpcr_fpr, by.x='st_merge', by.y='serotype', all=T)
+
+h1$carr_prop[is.na(h1$carr_prop)] <- min(h1$carr_prop, na.rm=T)
+
+```
 
 
+Probability of positive if detected
 
+Sensitivity (A)
+False positivity (B)
+Estimate prevalence (C)
+```{r}
+A=1
+
+h1$probability_pos <- (A*h1$carr_prop) /((A*h1$carr_prop) + (1-h1$carr_prop)*h1$fp_percent )
+
+res2 <- h1[,c('st_merge','probability_pos')]
+
+res2 <- res2[order(-res2$probability_pos),]
+
+res2$serotype[is.na(res2$serotype)] <- res2$st_merge[is.na(res2$serotype)]
+
+write.csv(res2, './Data/qpcr_ranking.csv')
+```
 
 
