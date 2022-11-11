@@ -24,7 +24,7 @@ library(msm)
 
 ## Overview
 
-The SCOPE study enrolled adults 60 years of age and older in greater New Haven over the course of 2 years (October 2020-September 2022). Individuals were followed longitudinally over a 10 week period (6 visits, 2 weeks apart). At each study visit, individuals provided a saliva sample, and at the final visit, they provided a urine sample. They also completed a questionnaire about their activities and contacts with others. A unique aspect of this study is that subjects were enrolled as pairs living in the same household, and these two people were the only members of te household.
+The SCOPE study enrolled adults 60 years of age and older in greater New Haven over the course of 2 years (October 2020-September 2022). Individuals were followed longitudinally over a 10 week period (6 visits, 2 weeks apart). At each study visit, individuals provided a saliva sample, and at the final visit, they provided a urine sample. They also completed a questionnaire about their activities and contacts with others. A unique aspect of this study is that subjects were enrolled as pairs living in the same household, and these two people were the only members of the household.
 
 ## Study objectives
 
@@ -149,7 +149,8 @@ flextable(t5)
 ```{r}
 t5 <- pcr_survey %>%
   group_by(recent_nasal) %>%
-  summarize(N_piaB= sum(piab_pos), N_test= n(), Pct_piab=round(mean(piab_pos)*100,1) )
+  summarize(N_piaB= sum(piab_pos), N_test= n(), Pct_piab=round(mean(piab_pos)*100,1) ) %>%
+  mutate( recent_nasal = if_else(is.na(recent_nasal), 'Missing',recent_nasal) )
 
 t5 <- as_grouped_data(x = t5, groups = c("recent_nasal"), columns = NULL)
 
@@ -159,7 +160,8 @@ flextable(t5)
 ```{r}
 t5 <- pcr_survey %>%
   group_by(recent_runny_nose) %>%
-  summarize(N_piaB= sum(piab_pos), N_test= n(), Pct_piab=round(mean(piab_pos)*100,1) )
+  summarize(N_piaB= sum(piab_pos), N_test= n(), Pct_piab=round(mean(piab_pos)*100,1) )%>%
+  mutate( recent_runny_nose = if_else(is.na(recent_runny_nose), 'Missing',recent_runny_nose) )
 
 t5 <- as_grouped_data(x = t5, groups = c("recent_runny_nose"), columns = NULL)
 
@@ -171,12 +173,39 @@ Recent Abx
 ```{r}
 t5 <- pcr_survey %>%
   group_by(recent_abx) %>%
-  summarize(N_piaB= sum(piab_pos), N_test= n(), Pct_piab=round(mean(piab_pos)*100,1) )
+  summarize(N_piaB= sum(piab_pos), N_test= n(), Pct_piab=round(mean(piab_pos)*100,1) )%>%
+  mutate( recent_abx = if_else(is.na(recent_abx), 'Missing',recent_abx) )
 
 t5 <- as_grouped_data(x = t5, groups = c("recent_abx"), columns = NULL)
 
 flextable(t5) 
 ```
+an analysis of positivity by vax status? PPV status? PCV status? PPV/PCV status? Flu+PPV/PCV?
+
+```{r}
+t5 <- pcr_survey %>%
+  mutate(recent_pneumo_vax =as.character(recent_pneumo_vax )) %>%
+  group_by(recent_pneumo_vax) %>%
+  summarize(N_piaB= sum(piab_pos), N_test= n(), Pct_piab=round(mean(piab_pos)*100,1) )%>%
+  mutate( recent_pneumo_vax = if_else(is.na(recent_pneumo_vax), 'Missing',recent_pneumo_vax) )
+
+t5 <- as_grouped_data(x = t5, groups = c("recent_pneumo_vax"), columns = NULL)
+
+flextable(t5)
+```
+
+```{r}
+t5 <- pcr_survey %>%
+  mutate(recent_flu_vax =as.character(recent_flu_vax )) %>%
+  group_by(recent_flu_vax) %>%
+  summarize(N_piaB= sum(piab_pos), N_test= n(), Pct_piab=round(mean(piab_pos)*100,1) )%>%
+  mutate( recent_flu_vax = if_else(is.na(recent_flu_vax), 'Missing',recent_flu_vax) )
+
+t5 <- as_grouped_data(x = t5, groups = c("recent_flu_vax"), columns = NULL)
+
+flextable(t5)
+```
+
 
 
 
@@ -250,6 +279,7 @@ t10 <- as_grouped_data(x = t10, groups = c("Gender"), columns = NULL)
 
 flextable(t10)
 ```
+
 Child contact 5-9y
 ```{r}
 t11 <- pcr_survey %>%
@@ -275,6 +305,7 @@ t12 <- as_grouped_data(x = t12, groups = c("Gender"), columns = NULL)
 
 flextable(t12)
 ```
+
 How does intensity of child contact vary by season
 
 0= none reported, 1=Daily; 2=every few days; 3= once or twice a month
@@ -533,7 +564,7 @@ flextable(t16)
 12-23m
 ```{r}
 t16  <- pcr_survey %>%
-  group_by( child_contact_13_23m ) %>%
+  group_by( child_contact_13_23m ,season) %>%
   summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
 
 t16 <- as_grouped_data(x = t16, groups = c("child_contact_13_23m"), columns = NULL)
@@ -544,7 +575,7 @@ flextable(t16)
 
 ```{r}
 t16  <- pcr_survey %>%
-  group_by( child_contact_24_59m ) %>%
+  group_by( child_contact_24_59m ,season) %>%
   summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
 
 t16 <- as_grouped_data(x = t16, groups = c("child_contact_24_59m"), columns = NULL)
@@ -555,7 +586,7 @@ flextable(t16)
 
 ```{r}
 t16  <- pcr_survey %>%
-  group_by( child_contact_5_10y ) %>%
+  group_by( child_contact_5_10y,season ) %>%
   summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
 
 t16 <- as_grouped_data(x = t16, groups = c("child_contact_5_10y"), columns = NULL)
@@ -566,7 +597,7 @@ flextable(t16)
 
 ```{r}
 t16  <- pcr_survey %>%
-  group_by( child_contact_over10y ) %>%
+  group_by( child_contact_over10y , season) %>%
   summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
 
 t16 <- as_grouped_data(x = t16, groups = c("child_contact_over10y"), columns = NULL)
@@ -574,7 +605,15 @@ t16 <- as_grouped_data(x = t16, groups = c("child_contact_over10y"), columns = N
 
 flextable(t16)
 ```
-intensity of contact
+
+### intensity of contact
+
+Seems to show people with less intense contact have higher prevalence. This seems counter-intuitive, until you look at the next 2 tables, which show that prevalence is higher in people with more frequent contact; and people with more frequent contact tend to have fewer contact hours per visit. This suggest frequency is the driver.
+
+1, < 4 hours (just a morning or afternoon or evening) | 
+2, 4-8 hours (full day) | 
+3, 8+ hours (longer visit such as day care or overnight)
+
 ```{r}
 t17  <- pcr_survey %>%
   mutate(child_contact_hours= if_else(is.na(child_contact_hours),999,child_contact_hours)) %>%
@@ -588,6 +627,12 @@ flextable(t17)
 ```
 
 frequency of contact vs pneumo positivity
+1, Daily | 
+2, Every few days | 
+3, Once or twice a month
+This makes sense--more common contatct, more carriage
+
+N_pos is the number of positives for that level of contact frequency; pct_pos is percent positive for that level
 
 ```{r}
 t17  <- pcr_survey %>%
@@ -596,6 +641,67 @@ t17  <- pcr_survey %>%
 
 flextable(t17)
 ```
+What is relationship between frequency of child contact and intensity? Higher frequency; less intensity per visit
+
+```{r}
+tab1 <- pcr_survey %>%
+  filter(child_contact_hours !=999 & child_contact_often !=999)
+
+table(tab1$child_contact_hours)
+
+table(tab1$child_contact_often)
+
+table(tab1$child_contact_often, tab1$child_contact_hours)
+
+```
+
+Out of curiousity, break down the table of pneumo poisitivity by contact frequency AND gender. This is interesting; women who have daily contact have super high prevalence; men not so much. 
+
+```{r}
+t17  <- pcr_survey %>%
+  group_by(Gender, child_contact_often ) %>%
+  summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
+
+t17 <- as_grouped_data(x = t17, groups = c("Gender"), columns = NULL)
+
+flextable(t17)
+
+```
+
+```{r}
+t17  <- pcr_survey %>%
+  group_by(Gender, child_contact_hours ) %>%
+  summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
+
+t17 <- as_grouped_data(x = t17, groups = c("Gender"), columns = NULL)
+
+flextable(t17)
+
+```
+Lets create a combined index..groups 7 and 8 have highest prevalence; this is people who have daily or every few day contact for short duration
+
+```{r}
+
+t17  <- pcr_survey %>%
+  mutate( intensity_index = if_else(child_contact_hours==3 & child_contact_often==1,1,
+                            if_else(child_contact_hours==3 & child_contact_often==2,2,
+                            if_else(child_contact_hours==3 & child_contact_often==3,3,
+                            if_else(child_contact_hours==2 & child_contact_often==1,4,    
+                            if_else(child_contact_hours==2 & child_contact_often==2,5,
+                            if_else(child_contact_hours==2 & child_contact_often==3,6,
+                            if_else(child_contact_hours==1 & child_contact_often==1,7,
+                            if_else(child_contact_hours==1 & child_contact_often==2,8,
+                            if_else(child_contact_hours==1 & child_contact_often==3,9,999)))))))))) %>%
+  group_by( intensity_index ) %>%
+  summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
+
+#t17 <- as_grouped_data(x = t17, groups = c("Gender"), columns = NULL)
+
+flextable(t17)
+```
+
+
+
 
 Prevalence by sex. Seems that men and women had similar prevalence in Season 1; Women had similar prevalence again in Season 2, men had very little carriage.
 
@@ -608,6 +714,7 @@ t16 <- as_grouped_data(x = t16, groups = c("Gender"), columns = NULL)
 
 flextable(t16)
 ```
+
 Prevalence by sex and child contact (small numbers)
 
 ```{r}
@@ -624,6 +731,17 @@ flextable(t16)
 ```
 
     -   Test with Fisher's Exact Test (p\<0.05)
+
+**To be done, as requested by LG**
+- Descriptive analysis of NP serotype distribution
+		PCV13 serotypes
+		PPV23 serotypes
+		 NVT seroytpes
+- Correlations in serotype positivity among pairs
+- Correlations in serotype positivity among pairs over time (i.e., was there a likely transmission event where one adult in the pair was serotype positive and then the second adult in the pair became positive for the same serotype).
+- Comparison of genetic lineages for serotypes identified among pairs
+- UAD results – how will these be incorporated into the analysis?
+
 
 ### Regression models
 
