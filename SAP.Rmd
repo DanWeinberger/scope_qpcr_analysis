@@ -17,6 +17,7 @@ library(ggplot2)
 library(ggalluvial)
 library(kableExtra)
 library(knitr)
+library(gee)
 library(reshape2)
 library(flextable)
 library(msm)
@@ -180,7 +181,7 @@ t5 <- as_grouped_data(x = t5, groups = c("recent_abx"), columns = NULL)
 
 flextable(t5) 
 ```
-an analysis of positivity by vax status? PPV status? PCV status? PPV/PCV status? Flu+PPV/PCV?
+an analysis of positivity by vax status? PPV status? PCV status? PPV/PCV status? Flu+PPV/PCV? Note season 2 questionaire only asked about **recent** vaccine receipt (in past 2 weeks); does not ask about whether ever vaccinated. we have permission to contact PCPs to obtain vax info but have not done this.
 
 ```{r}
 t5 <- pcr_survey %>%
@@ -442,6 +443,7 @@ ggplot(d1.m, aes(x=season, stratum=variable,alluvium=variable,fill=variable,labe
   ggtitle('Intensity of contact ith kids 1-10y')
 
 ```
+
 Recent runny nose?
 
 ```{r}
@@ -749,37 +751,46 @@ Evaluate correlates of pneumococcal positivity.
 
 -   Multivariate logistic regression to identify relevant age groups
 
+Assumes missing survey is no contact with kids...need to clean this up a bit (e.g., if survey totally missing exclude the observation)
+
+```{r}
+pcr_survey_mod <-  pcr_survey %>%
+    filter(child_contact_13_23m!=9999 & !is.na(piab_pos)) %>%
+  mutate( child_contact_13_23m = if_else(child_contact_13_23m==9999,0, child_contact_13_23m),
+                               child_contact_24_59m = if_else(child_contact_24_59m==9999,0, child_contact_24_59m),
+                                child_contact_5_10y = if_else(child_contact_5_10y==9999,0, child_contact_5_10y),
+    N_child_contact_1_10 = child_contact_13_23m + child_contact_24_59m + child_contact_5_10y,
+    child_contact_hours=as.factor(child_contact_hours),
+    child_contact_often =as.factor(child_contact_often))
+  
+```
+
 ```{r, echo=T, eval=F}
-        mod1 <- glm(piab_pos ~ child_contact_u12m + child_contact_13_23m + child_contact_24_59m + child_contact_5_10y + child_contact_over10y , family='binomial', data=pcr_survey)
+        mod1 <- glm(piab_pos ~ child_contact_u12m + child_contact_13_23m + child_contact_24_59m + child_contact_5_10y + child_contact_over10y , family='binomial', data=pcr_survey_mod)
 
 summary(mod1)
 ```
 
 
+Test frequency of contact and N contacts age 1-10; each of which is associated in univariate analysis.
+
 ```{r}
-pcr_survey$child_contact_hours <- as.factor(pcr_survey$child_contact_hours)
-
-pcr_survey$child_contact_often <- as.factor(pcr_survey$child_contact_often)
-
-pcr_survey$N_child_contact_1_10 <-  pcr_survey$child_contact_13_23m + pcr_survey$child_contact_24_59m + pcr_survey$child_contact_5_10y
-  
-
-   mod1 <- glm(piab_pos ~  child_contact_often  + N_child_contact_1_10  , family='binomial', data=pcr_survey)
+   mod1 <- glm(piab_pos ~  child_contact_often  +  child_contact_24_59m + child_contact_5_10y  , family='binomial', data=pcr_survey_mod)
 summary(mod1)
 ```
 
 Generalized estimating equation to account for correlation within individuals
 
 ```{r, echo=T, eval=F}
-mod1.gee <- gee(piab_pos ~ child_contact_u12m+ child_contact_13_23m + child_contact_24_59m + child_contact_5_10y + child_contact_over10y,id=pcr_survey$ID, data=pcr_survey, family=binomial(link='log'), corstr="exchangeable")
+mod1.gee <- gee(piab_pos ~ child_contact_u12m+ child_contact_13_23m + child_contact_24_59m + child_contact_5_10y + child_contact_over10y,id=pcr_survey$ID, data=pcr_survey_mod, family=binomial(link='log'), corstr="exchangeable")
 ```
 
 ### Longitudinal data analysis
 
 Use a Markov transition model with 2 states (colonized, uncolonized) to quantify acquisition and clearance rates and correlates of both. The model below estimates acquisition and clearance rates, and teh effect of recent contact with a child \<12m on acquisition rates
 
-```{r, echo=T, eval=F}
-mod.df <- pcr_survey %>%
+```{r, echo=T, eval=T}
+mod.df <- pcr_survey_mod %>%
   filter(child_contact_13_23m!=9999 & !is.na(piab_pos)) %>%
   mutate(ID=as.factor(ID))
 
@@ -838,7 +849,7 @@ msm.mod1e
 Frequency of child contact and acquisition and clearance rates. Those with contact with children have more frequent acquisition and (apparently) slower clearance. But need to remember that we can't distinguish distinct colonization episodes yet until we get serotype info
 ```{r}
 
-l2 <- l2%>% 
+l2 <- l2 %>% 
   mutate(child_contact_often1 =if_else(child_contact_often %in% c('1','2'),1,0),
          child_contact_often2 =if_else(child_contact_often %in% c('3'),1,0))
          
@@ -852,7 +863,8 @@ msm.mod1e
 
 ```
 
-or hours of contact. acquisition rate is lower for those with 4-8 and 8+ hours of reported contact
+or hours of contact. acquisition rate is lower for those with 4-8 and 8+ hours of reported contact--these people tend to have less frequent contacts
+
 ```{r}
 
 l2 <- l2%>% 
@@ -864,7 +876,7 @@ msm.mod1e <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = l
 msm.mod1e
 ```
 
-It appears those with shorter contacts have higher carriage than those with longer contacts. This could be a) confounding by age of contacts b) some boosting effect from frequent/intense contact
+It appears those with shorter contacts have higher carriage than those with longer contacts. This could be a) confounding by age of contacts b) confoduning by frequency of contacts c) some boosting effect from frequent/intense contact. Descriptive analyses suggest it is (b)
 
 Sems that those with contact with 1-10 year olds with lower duration contact have highest estimate for acquisition rate
 ```{r}
@@ -892,7 +904,7 @@ dichotomized contacts age 1-10y
 
 ```{r}
 
-msm.mod1d <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_contact_1_10_dic))
+msm.mod1d <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2.cat,covariates = list("1-2" = ~ child_contact1_10_dic))
 msm.mod1d
 ```
 
