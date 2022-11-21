@@ -4,8 +4,6 @@ author: "Dan Weinberger"
 date: '2022-09-22'
 output:
   word_document: default
-  html_document: default
-always_allow_html: true
 ---
 
 ```{r setup, include=FALSE}
@@ -17,10 +15,24 @@ library(ggplot2)
 library(ggalluvial)
 library(kableExtra)
 library(knitr)
+library(readxl)
 library(gee)
 library(reshape2)
 library(flextable)
 library(msm)
+library(patchwork)
+library(gridExtra)
+library(pheatmap)
+library(RColorBrewer)
+library(table1)
+source('heat.fun.R')
+source('heat.fun.contact.R')
+source('./R/clean_pcr.R')
+
+source('./R/clean_s1_surveys.R')
+source('./R/clean_s2_surveys.R')
+clean_pcr <- clean_pcr_fun()
+
 ```
 
 ## Overview
@@ -53,6 +65,33 @@ pcr_survey <- readRDS('./Data./pcr_survey_combined.rds') %>%
           Gender=if_else(ID=='S2_77' & is.na(Gender), 'F',Gender))
 ```
 
+Age summary
+
+```{r}
+unique.age <- pcr_survey %>%
+  group_by(ID) %>%
+  summarize(Age=mean(Age, na.rm=T))
+
+hist(unique.age$Age, main='Distribution of ages', xlab='Age(y)')
+
+unique.age %>%
+  summarize(mean=mean(Age, na.rm=T), min=min(Age, na.rm=T), max=max(Age, na.rm=T))
+
+```
+
+```{r}
+first_visit <- pcr_survey %>% filter(time==1) %>%
+  mutate(Race=tolower(Race), Ethnicity=tolower(Ethnicity))
+
+tab1 <- table1( ~Age + Gender + Race +Ethnicity + activity_family + activity_friends + activity_community_center , data=first_visit)
+
+tab1 <- as.data.frame(tab1)
+flextable(tab1)
+
+```
+
+
+
 -   lytA vs piaB Ct values
 
 ```{r}
@@ -71,6 +110,29 @@ p1 <- ggplot(pcr_summary_long,aes(x=lyta, y=piab, alpha=0.5))+
 
 p1
 
+```
+-   Heatmap of positivity for piaB
+
+
+```{r, fig.width=5, fig.height=5}
+piab.plot <- heat.fun(target='piab')
+
+# breakslist<-seq(15,45,by=1)
+# 
+# cols1 <- colorRampPalette(c('red4','red','darkorange','orange','gold','lightgoldenrod1','white','white'))(length(breakslist))
+# 
+# p1 <- ggplot(d1.ds, aes(time, HH_order, fill= piab)) +
+#   geom_tile() +
+#   scale_fill_viridis_c(option = "B", direction = -1) +
+# 
+#   theme_classic()+
+#   ylab('Serotype tested')+
+#    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+#   facet_wrap(~Household, ncol=3)+
+#   theme(
+#   strip.text.x = element_blank()
+# )
+# p1
 ```
 
 -   Percent of tests that were positive, overall
@@ -100,7 +162,31 @@ t2 <- pcr_summary_long %>%
 flextable(t2)
 ```
 
+- how many households? How many people?
+
+```{r}
+
+pcr_summary_long %>%
+  filter(!is.na(Household)) %>%
+  summarize(N_hh=length(unique(pcr_summary_long$Household)), N_people=length(unique(pcr_summary_long$ID)))
+```
+
 -   Percent of people who were positive (period prevalence)
+
+overall
+```{r}
+t3 <- pcr_summary_long %>%
+  filter(piab != 9999) %>%
+  mutate(piab_pos = if_else(piab < 40,1,0),
+         lyta_pos = if_else(lyta < 40,1,0),
+         season=substr(ID,1,2) ) %>%
+  group_by(ID) %>%
+  summarize(any_pos_piab = max(piab_pos)) %>%
+  ungroup() %>%
+  summarize(N_people=n(), N_pos=sum(any_pos_piab), `Percent Positive People`=round(100*mean(any_pos_piab),1))
+
+flextable(t3)
+```
 
 ```{r}
 t3 <- pcr_summary_long %>%
@@ -116,6 +202,7 @@ t3 <- pcr_summary_long %>%
 
 flextable(t3)
 ```
+
 
 -   Percent of households that were positive
 
@@ -144,6 +231,18 @@ t5 <- pcr_survey %>%
 t5 <- as_grouped_data(x = t5, groups = c("Gender"), columns = NULL)
 
 flextable(t5) 
+```
+or period prevalence by sex and season
+
+```{r}
+ t5 <- pcr_survey %>%
+   group_by(ID,Gender,season) %>%
+   summarize(piaB_period_pos= max(piab_pos) ) %>%
+   ungroup() %>%
+  group_by(Gender, season) %>%
+  summarize(N_pos_people=sum(piaB_period_pos), N_people=n() ) %>%
+  mutate(period_prev=round(100*N_pos_people/N_people,1))
+flextable(t5)
 ```
 -   Percent positive by symptoms
 
@@ -531,17 +630,29 @@ t18 <- as_grouped_data(x = t18, groups = c('season'), columns = NULL)
 flextable(t18)
 ```
 
--   Proportion positive, stratified by contacts
+##   Proportion positive, stratified by contacts
 
     -   Contact with children \<5 years
     
 Between seasons, among people without reported child contact, prevalence is much lower; it is similar among those with a reported contact
 
+ANY contact
+```{r}
+t16  <- pcr_survey %>%
+  mutate(child_contact= if_else(is.na(child_contact)| child_contact==9999,9999,child_contact)) %>%
+  group_by( child_contact,  ) %>%
+  summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
+
+t16 <- as_grouped_data(x = t16, groups = c("child_contact"), columns = NULL)
+
+flextable(t16) 
+```
+
 ```{r}
 t16  <- pcr_survey %>%
   mutate(child_contact_u5 = if_else( (child_contact_u12m==1 |child_contact_13_23m==1 | child_contact_24_59m==1),1,0   ),
          child_contact_u5= if_else(is.na(child_contact_u12m)| child_contact_u12m==9999,9999,child_contact_u5)) %>%
-  group_by( child_contact_u5, season ) %>%
+  group_by( child_contact_u5 ) %>%
   summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
 
 t16 <- as_grouped_data(x = t16, groups = c("child_contact_u5"), columns = NULL)
@@ -555,7 +666,7 @@ flextable(t16)
     <12m
 ```{r}
 t16  <- pcr_survey %>%
-  group_by( child_contact_u12m, season ) %>%
+  group_by( child_contact_u12m ) %>%
   summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
 
 t16 <- as_grouped_data(x = t16, groups = c("child_contact_u12m"), columns = NULL)
@@ -566,7 +677,7 @@ flextable(t16)
 12-23m
 ```{r}
 t16  <- pcr_survey %>%
-  group_by( child_contact_13_23m ,season) %>%
+  group_by( child_contact_13_23m ) %>%
   summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
 
 t16 <- as_grouped_data(x = t16, groups = c("child_contact_13_23m"), columns = NULL)
@@ -577,7 +688,7 @@ flextable(t16)
 
 ```{r}
 t16  <- pcr_survey %>%
-  group_by( child_contact_24_59m ,season) %>%
+  group_by( child_contact_24_59m ) %>%
   summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
 
 t16 <- as_grouped_data(x = t16, groups = c("child_contact_24_59m"), columns = NULL)
@@ -588,7 +699,7 @@ flextable(t16)
 
 ```{r}
 t16  <- pcr_survey %>%
-  group_by( child_contact_5_10y,season ) %>%
+  group_by( child_contact_5_10y ) %>%
   summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
 
 t16 <- as_grouped_data(x = t16, groups = c("child_contact_5_10y"), columns = NULL)
@@ -599,7 +710,7 @@ flextable(t16)
 
 ```{r}
 t16  <- pcr_survey %>%
-  group_by( child_contact_over10y , season) %>%
+  group_by( child_contact_over10y ) %>%
   summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
 
 t16 <- as_grouped_data(x = t16, groups = c("child_contact_over10y"), columns = NULL)
@@ -680,6 +791,7 @@ t17 <- as_grouped_data(x = t17, groups = c("Gender"), columns = NULL)
 flextable(t17)
 
 ```
+
 Lets create a combined index..groups 7 and 8 have highest prevalence; this is people who have daily or every few day contact for short duration
 
 ```{r}
@@ -825,9 +937,30 @@ q1 <- rbind(c( 0,0.01),
 
 l1 <- l1[order(l1$ID, l1$day),]
 
-l2 <- l1[, c('state','child_contact_u5','child_contact_1_5','child_contact','Gender','child_contact_u12m','child_contact_13_23m',"child_contact_24_59m","child_contact_5_10y",'child_contact_over10y','child_contact_1_10', 'ID','day', 'season','child_contact_often','child_contact_hours')]
+l2 <- l1[, c('state','child_contact_u5','child_contact_1_5','child_contact','Gender','child_contact_u12m','child_contact_13_23m',"child_contact_24_59m","child_contact_5_10y",'child_contact_over10y','child_contact_1_10', 'ID','day', 'season','child_contact_often','child_contact_hours')] %>%
+  mutate(child_contact_2_10y = if_else( (child_contact_24_59m==1 |child_contact_5_10y==1) & child_contact !=9999,1,
+                                       if_else(child_contact_24_59m==0  & child_contact_5_10y==0 & child_contact !=9999,0, 
+                                               if_else(child_contact==9999 ,9999, 9999) ) ))
 
-msm.mod1 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_contact_u12m))
+msm.mod0 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2)
+msm.mod0
+
+msm.mod1 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_contact_13_23m ))
+msm.mod1
+
+msm.mod1 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_contact_24_59m ))
+msm.mod1
+
+
+msm.mod1 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_contact_5_10y ))
+msm.mod1
+
+
+msm.mod1 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_contact_2_10y ))
+msm.mod1
+
+
+msm.mod1 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_contact_13_23m + child_contact_24_59m + child_contact_5_10y ))
 msm.mod1
 
 msm.mod1b <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_contact_1_5))
@@ -846,18 +979,24 @@ msm.mod1e
 
 ```
 
-Frequency of child contact and acquisition and clearance rates. Those with contact with children have more frequent acquisition and (apparently) slower clearance. But need to remember that we can't distinguish distinct colonization episodes yet until we get serotype info
+Frequency of child contact and acquisition and clearance rates. Those with contact with children have more frequent acquisition. Not clear if can identify acquistiion and clearance rates from these data, especially without serotype info. 
 ```{r}
 
-l2 <- l2 %>% 
+##IN THIS CODING, 1= FREQUENT CONTACT; 0 = LESS FREQUENT CONTACT, NO CONTACT, NO RESPONSE
+l3 <- l2 %>% 
   mutate(child_contact_often1 =if_else(child_contact_often %in% c('1','2'),1,0),
-         child_contact_often2 =if_else(child_contact_often %in% c('3'),1,0))
-         
-msm.mod1e <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list( "1-2" = ~ child_contact_often1 + child_contact_often2))
+         child_contact_often2 =if_else(child_contact_often %in% c('3'),1,0)) %>%
+  filter(child_contact !=9999)
+
+
+msm.mod1e <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l3)
+msm.mod1e
+
+msm.mod1e <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l3,covariates = list( "1-2" = ~ child_contact_often1 + child_contact_often2))
 msm.mod1e
 
 
-msm.mod1e <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list( "2-1" = ~ child_contact_often1 + child_contact_often2))
+msm.mod1e <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l3,covariates = list( "1-2" = ~ child_contact_often1 , "2-1" = ~ child_contact_often1 ))
 msm.mod1e
 
 
@@ -985,6 +1124,67 @@ msm.mod1 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = li
 
 msm.mod1
 ```
+
+
+as a test, try same analysis using lyta as the outcome. This is problematic because we cannot distrinuish lyta strains, but might give some hint.
+```{r}
+mod.df <- pcr_survey %>%
+  filter( !is.na(lyta_pos)) %>%
+  mutate(ID=as.factor(ID))
+
+recent_hh_col <- mod.df %>%
+  group_by(Household,time ) %>%
+  summarize(lyta_pos=max(lyta_pos)) %>%
+  mutate(time=time+1) %>%
+  rename(lyta_pos_HH_prev = lyta_pos)
+
+recent_ID_col <- mod.df %>%
+  group_by(Household,ID,time ) %>%
+  summarize(lyta_pos=sum(lyta_pos)) %>%
+  mutate(time=time+1) %>%
+  rename(lyta_pos_ID_prev = lyta_pos)
+
+#colonized_partner_prev is defined based on a positive household without positive individual on previous time
+recent_col <- merge(recent_hh_col,recent_ID_col, by=c('Household', 'time') ) %>%
+  mutate(colonized_partner_prev = lyta_pos_HH_prev - lyta_pos_ID_prev)
+
+mod.df <- merge(mod.df,recent_col, by=c('ID','Household', 'time')) 
+
+#N contacts
+mod.df$child_contact_1_10 <- mod.df$child_contact_13_23m + mod.df$child_contact_24_59m  +mod.df$child_contact_5_10y
+
+
+l1 <- mod.df
+l1$day <- 0
+l1$day[l1$time==2] <- 14
+l1$day[l1$time==3] <- 14*2
+l1$day[l1$time==4] <- 14*3
+l1$day[l1$time==5] <- 14*4
+l1$day[l1$time==6] <- 14*5
+
+l1$state <- NA
+l1$state[l1$lyta_pos==0 & !is.na(l1$lyta_pos)] <- 1
+l1$state[l1$lyta_pos==1 & !is.na(l1$lyta_pos)] <- 2
+#l1$state <- as.factor(l1$state)
+
+
+q1 <- rbind(c( 0,0.01),
+            c(0.01,0)
+)
+
+l1 <- l1[order(l1$ID, l1$day),]
+
+l2 <- l1[, c('state','Gender','child_contact_1_10', 'ID','day','colonized_partner_prev')]                
+
+table(l2$state, l2$colonized_partner_prev)
+
+msm.mod0 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2 )
+msm.mod0
+msm.mod1 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ colonized_partner_prev ))
+
+msm.mod1
+```
+
 
 ## Notes and challenges
 

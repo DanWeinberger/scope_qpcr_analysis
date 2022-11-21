@@ -33,8 +33,9 @@ s1_demographics <- read_excel('./Data/scope_demographics deidentified S1.xlsx') 
 s2_demographics_b <- read_excel('./Data/confidential/New Participants SCOPE_season 2.xlsx', sheet='repeat participant cheat sheet')
 
 s2_demographics_b2 <- left_join(s2_demographics_b,s1_demographics, by="season 1 scope ID") %>%
-  rename(ID=`season 2 scope ID`) %>%
-  select(ID, Age, Gender, Race, Ethnicity)
+  rename(ID=`season 2 scope ID`, s1_match=`season 1 scope ID`) %>%
+  select(ID, s1_match,Age, Gender, Race, Ethnicity) %>%
+  mutate(s1_match = paste0('S1_',s1_match))
 
 s2_demographics_a <- read_excel('./Data/confidential/New Participants SCOPE_season 2.xlsx', sheet='new participants season 2') %>%
   rename(ID = `scope ID`, Race = `How would you describe your ethnicity?`,

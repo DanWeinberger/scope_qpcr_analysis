@@ -134,7 +134,9 @@ q0$MRN <- as.numeric(gsub('MR','',q0$MRN))
 
 #Fortnightly questionnaire and intake cleaning...do not run each time
 
-q1b0 <- read_excel('./Data/confidential/SCOPE Fortnightly Questionnaire_September 24, 2021_12.00_clean.xlsx', skip=1)
+#Manually clean v2 for age of contact intp
+
+q1b0 <- read_excel('./Data/confidential/SCOPE Fortnightly Questionnaire_September 24, 2021_12.00_clean v2.xlsx', skip=1)
 q1b0$`Date of Visit` <- as.character(q1b0$`Date of Visit`)
 
 orig.colnames <- names(q1b0)
@@ -163,6 +165,7 @@ q1 <- bind_rows(q1b0,q1b1, q1b2,q1b3) %>%
          social_activity_type=`What sorts of activities have you participated in? - Selected Choice` , 
          contact_children = `Have you had any contact with children in the past two weeks?` , 
          age_child_contacts=`If yes, what is the age range of the children you have had contact with? - Selected Choice`,
+         age_child_contacts_detail=`If yes, what is the age range of the children you have had contact with? - Record actual age if given - Text`,
          frequency_child_contacts=`How often do you usually have contact with children?` , 
          time_day_child_contacts=`How much contact per day do you have?`, 
          recent_covid_test=`Have you been tested for COVID in the last two weeks?` , 
@@ -179,7 +182,7 @@ q1 <- bind_rows(q1b0,q1b1, q1b2,q1b3) %>%
 ) %>%
   select(MRN, visit_date, visitN, visit_location,
          recent_social_activities,social_activity_type,contact_children,
-         age_child_contacts,frequency_child_contacts,
+         age_child_contacts,age_child_contacts_detail,frequency_child_contacts,
          time_day_child_contacts,recent_covid_test,
          recent_doctor,recent_vaccines,recent_vaccines_descr,
          sample_time,recent_abx,recent_nasal,recent_cough,recent_runny_nose)
@@ -187,7 +190,7 @@ q1 <- bind_rows(q1b0,q1b1, q1b2,q1b3) %>%
 q0.baseline.vars <- c("pos_covid_past","pos_covid_date","pneu_vax", "pneu_vax_date",'ethnicity','weight','height','education', "immuno_meds" ,"diabetes_meds", "asthma_meds","flu_shot","hh_relationship", "relationship_duration")
 
 q1$MRN <-  gsub("mr","", q1$MRN )
-q1$MRN <- as.numeric(gsub('MR','', q1$MRN)) 
+q1$MRN <- as.character(as.numeric(gsub('MR','', q1$MRN)) )
 
 #Combine baseline and fortnightly surveys
 q2 <- bind_rows(q0[,-which(names(q0) %in% q0.baseline.vars)], q1) #combine q0, q1
