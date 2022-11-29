@@ -80,10 +80,30 @@ unique.age %>%
 ```
 
 ```{r}
-first_visit <- pcr_survey %>% filter(time==1) %>%
-  mutate(Race=tolower(Race), Ethnicity=tolower(Ethnicity))
 
-tab1 <- table1( ~Age + Gender + Race +Ethnicity + activity_family + activity_friends + activity_community_center , data=first_visit)
+
+first_visit <- pcr_survey %>% filter(time==1) %>%
+  mutate(Race=tolower(Race), Ethnicity=tolower(Ethnicity), smoke=as.factor(smoke), pneu_vax=as.factor(pneu_vax), flu_shot=as.factor(flu_shot) , diabetes=as.factor(diabetes), asthma=as.factor(asthma),
+         education=toupper(education),
+         education_level= if_else(grepl('HIGH', education) |
+                                    grepl("GED",education) , 'HS',
+                          if_else(grepl('BACHELOR', education) |
+                                    grepl('COLLEGE', education)|
+                                    grepl('ASSOCIATE', education)|
+                                   grepl('BA', education) ,'Undergrad',
+                          if_else(grepl('MASTER', education)|
+                                                    grepl('GRADUATE', education)|
+                                                    grepl('MBA', education)|
+                                                    grepl('PHD', education)|
+                                                    grepl('JD', education)|
+                                                    grepl('J.D.', education)|
+                                                    grepl('MPH', education)|
+                                                    grepl('MD', education)|
+                                                     grepl('DOCTORATE', education), 'Graduate', 'Unknown')))
+  )
+
+
+tab1 <- table1( ~Age + Gender + Race +Ethnicity + activity_family + activity_friends + activity_community_center +  smoke+ diabetes + asthma + pneu_vax + flu_shot +education_level , data=first_visit)
 
 tab1 <- as.data.frame(tab1)
 flextable(tab1)
@@ -267,6 +287,79 @@ t5 <- as_grouped_data(x = t5, groups = c("recent_runny_nose"), columns = NULL)
 
 flextable(t5) 
 ```
+
+
+-   Percent positive by Pneumococcal vaccine (could be PCV or ppv23)
+
+```{r}
+t5 <- pcr_survey %>%
+  group_by(pneu_vax) %>%
+  summarize(N_piaB= sum(piab_pos), N_test= n(), Pct_piab=round(mean(piab_pos)*100,1) ) %>%
+  mutate(pneu_vax = if_else(is.na(pneu_vax),999, pneu_vax))
+
+t5 <- as_grouped_data(x = t5, groups = c("pneu_vax"), columns = NULL)
+
+flextable(t5) 
+
+```
+Diabetes status 
+
+```{r}
+t5 <- pcr_survey %>%
+  group_by(diabetes) %>%
+  summarize(N_piaB= sum(piab_pos), N_test= n(), Pct_piab=round(mean(piab_pos)*100,1) ) %>%
+  mutate(diabetes = if_else(is.na(diabetes),999, diabetes))
+
+t5 <- as_grouped_data(x = t5, groups = c("diabetes"), columns = NULL)
+
+flextable(t5) 
+
+```
+
+Asthma status 
+
+```{r}
+t5 <- pcr_survey %>%
+  group_by(asthma) %>%
+  summarize(N_piaB= sum(piab_pos), N_test= n(), Pct_piab=round(mean(piab_pos)*100,1) ) %>%
+  mutate(asthma = if_else(is.na(asthma),999, asthma))
+
+t5 <- as_grouped_data(x = t5, groups = c("asthma"), columns = NULL)
+
+flextable(t5) 
+
+```
+
+Education level 
+
+```{r}
+t5 <- pcr_survey %>%
+  mutate(education=toupper(education),
+  education_level= if_else(grepl('HIGH', education) |
+                                    grepl("GED",education) , 'HS',
+                          if_else(grepl('BACHELOR', education) |
+                                    grepl('COLLEGE', education)|
+                                    grepl('ASSOCIATE', education)|
+                                   grepl('BA', education) ,'Undergrad',
+                          if_else(grepl('MASTER', education)|
+                                                    grepl('GRADUATE', education)|
+                                                    grepl('MBA', education)|
+                                                    grepl('PHD', education)|
+                                                    grepl('JD', education)|
+                                                    grepl('J.D.', education)|
+                                                    grepl('MPH', education)|
+                                                    grepl('MD', education)|
+                                                     grepl('DOCTORATE', education), 'Graduate', 'Unknown')))) %>%
+  group_by(education_level) %>%
+  summarize(N_piaB= sum(piab_pos), N_test= n(), Pct_piab=round(mean(piab_pos)*100,1) ) %>%
+  mutate(education_level = if_else(is.na(education_level),'Unknown', education_level))
+
+t5 <- as_grouped_data(x = t5, groups = c("education_level"), columns = NULL)
+
+flextable(t5) 
+
+```
+
 
 Recent Abx
 

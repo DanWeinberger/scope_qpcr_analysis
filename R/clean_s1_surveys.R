@@ -291,13 +291,6 @@ e3$piab_pos[e3$piab >=40 & !is.na(e3$piab)] <- 0
 e3$piab_pos[e3$piab <40 & !is.na(e3$piab)] <- 1 
 e3$piab_pos <- as.factor(e3$piab_pos)
 
-e3$smoke_dic <- NA
-e3$smoke_dic[grep('Yes',e3$current_smoke)] <- 1
-e3$smoke_dic[grep('No',e3$current_smoke)] <- 0
-
-e3$pneu_vax_dic <- NA
-e3$pneu_vax_dic[grep('Yes',e3$pneu_vax)] <- 1
-e3$pneu_vax_dic[grep('No',e3$pneu_vax)] <- 0
 
 #e3$pneu_vax_date[e3$pneu_vax_date=='N/A'] <- NA
 
@@ -378,6 +371,14 @@ e3 <- e3 %>%
 s1_demographics$ID <- as.numeric(s1_demographics$ID)
 e3 <- merge(e3, s1_demographics, by.x="idN", by.y='ID', all=T)
 
+
+e3$smoke_dic <- NA
+e3$smoke_dic[grep('Yes',e3$current_smoke)] <- 1
+e3$smoke_dic[grep('No',e3$current_smoke)] <- 0
+
+e3$pneu_vax_dic <- NA
+e3$pneu_vax_dic[grep('Yes',e3$pneu_vax)] <- 1
+e3$pneu_vax_dic[grep('No',e3$pneu_vax)] <- 0
 
 id.ages <- unique(e3[,c('ID','Age')])
 id.ages <- id.ages[!is.na(id.ages$Age),]
