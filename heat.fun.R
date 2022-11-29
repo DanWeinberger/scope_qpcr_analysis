@@ -29,7 +29,7 @@ ds1 <- ds1 %>%
 ds.plot <- dcast(ds1, house+sampleID + season + seasonid + seasonhh +HH_order~time, value.var = target)
 
 ds.plot <- ds.plot %>%
-  filter(!is.na(seasonid))
+  filter(!is.na(sampleID))
 
 ds.plot$labels <- paste(ds.plot$season, ds.plot$seasonid, sep='_')
 sub1 <- ds.plot[1:cut3,] 

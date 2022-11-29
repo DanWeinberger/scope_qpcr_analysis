@@ -739,6 +739,7 @@ t17  <- pcr_survey %>%
 flextable(t17)
 ```
 
+
 frequency of contact vs pneumo positivity
 1, Daily | 
 2, Every few days | 

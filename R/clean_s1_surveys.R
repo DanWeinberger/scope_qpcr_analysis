@@ -130,7 +130,19 @@ q0$visitN <- '1'
 
 q0$MRN <- as.numeric(gsub('MR','',q0$MRN))
 
+q0 <- q0 %>%
+  mutate( MRN=round(MRN),
+          MRN=if_else(MRN==414574,4149574, MRN),
+          MRN=if_else(MRN==121637,1212637, MRN),
+          MRN=if_else(MRN==24915329,2495329, MRN) 
+          ) %>%
+  arrange(MRN, education) %>%
+  group_by(MRN) %>%
+  mutate(repN=row_number()) %>%
+  ungroup() %>%
+  filter(repN==1)
 
+#24915329
 
 #Fortnightly questionnaire and intake cleaning...do not run each time
 
@@ -193,6 +205,8 @@ q1$MRN <-  gsub("mr","", q1$MRN )
 q1$MRN <- as.character(as.numeric(gsub('MR','', q1$MRN)) )
 
 #Combine baseline and fortnightly surveys
+q0$MRN <- as.character(q0$MRN)
+q1$MRN <- as.character(q1$MRN)
 q2 <- bind_rows(q0[,-which(names(q0) %in% q0.baseline.vars)], q1) #combine q0, q1
 
 q2$MRN <-  gsub("_visit#2.pdf","", q2$MRN )
@@ -345,7 +359,10 @@ e3$acitivity_fitness[is.na(e3$social_activity_type)] <- 9999
 #child_contact_often,child_contact_hours
 #these two variables often had coding switched so combine
 e3$child_combined <- paste(e3$frequency_child_contacts, e3$time_day_child_contacts)
+
+q0_merge <- q0[,c('MRN','pneu_vax',"pneu_vax_date", 'education','diabetes_meds','immuno_meds','asthma_meds', 'flu_shot')]
 e3 <- e3 %>%
+  
   filter(!is.na(Household)) %>%
   mutate( idN = as.numeric(gsub('S1_','', ID)),
     child_contact_hours = if_else(grepl('<4',child_combined),1,
@@ -355,7 +372,8 @@ e3 <- e3 %>%
                                        if_else(grepl('Every few',child_combined),2,
                                                if_else(grepl('Once or twice',child_combined),3,999))),
          
-         )
+         ) %>%
+  left_join(q0_merge, by=c('MRN_cleaned'='MRN'))
 
 s1_demographics$ID <- as.numeric(s1_demographics$ID)
 e3 <- merge(e3, s1_demographics, by.x="idN", by.y='ID', all=T)
@@ -387,7 +405,29 @@ actitivity_summary <- e3 %>%
             
   )
 
-out.list <- list('actitivity_summary_s1'=actitivity_summary, 'survey_and_pcr_s1'=e3)
+demographics <- read_excel('./Data/scope_demographics deidentified S1.xlsx') %>%
+  mutate(ID =as.numeric(ID)) %>%
+  rename(Age2=Age, Gender2=Gender, Race2=Race, Ethnicity2=Ethnicity)
+
+#season1 baseline variables
+baseline_s1 <- key2 %>%
+  rename(MRN=`MR#`) %>%
+  mutate(MRN=if_else(MRN==" 6450061","6450061", MRN),
+         MRN_cleaned = as.character(gsub('MR','',MRN))) %>%
+  full_join(y=q0, by=c("MRN_cleaned"="MRN") ) %>%
+  dplyr::select(MRN_cleaned,`ID Number`,pneu_vax, pneu_vax_date,ethnicity,weight,height,education, immuno_meds ,current_smoke,diabetes_meds, asthma_meds,flu_shot) %>%
+  rename(ID=`ID Number`) %>%
+  full_join(demographics, by='ID') %>%
+  mutate(Race2=if_else(is.na(Race2), ethnicity, Race2)) %>%
+  dplyr::select(-ethnicity)
+
+
+#baseline_s1 <- q0[, c('MRN',q0.baseline.vars)]
+
+saveRDS(baseline_s1,'./Data/confidential/s1_baseline_vars.rds')
+
+out.list <- list('actitivity_summary_s1'=actitivity_summary, 'survey_and_pcr_s1'=e3, 's1_baseline_vars'=baseline_s1)
 return(out.list)
 }
+
 
