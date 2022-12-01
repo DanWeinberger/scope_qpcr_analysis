@@ -389,12 +389,24 @@ flextable(t5)
 
 ```{r}
 t5 <- pcr_survey %>%
-  mutate(recent_flu_vax =as.character(recent_flu_vax )) %>%
-  group_by(recent_flu_vax) %>%
+  mutate(pneu_vax =as.character(pneu_vax )) %>%
+  group_by(pneu_vax) %>%
   summarize(N_piaB= sum(piab_pos), N_test= n(), Pct_piab=round(mean(piab_pos)*100,1) )%>%
-  mutate( recent_flu_vax = if_else(is.na(recent_flu_vax), 'Missing',recent_flu_vax) )
+  mutate( pneu_vax = if_else(is.na(pneu_vax), 'Missing',pneu_vax) )
 
-t5 <- as_grouped_data(x = t5, groups = c("recent_flu_vax"), columns = NULL)
+t5 <- as_grouped_data(x = t5, groups = c("pneu_vax"), columns = NULL)
+
+flextable(t5)
+```
+
+```{r}
+t5 <- pcr_survey %>%
+  mutate(flu_shot =as.character(flu_shot )) %>%
+  group_by(flu_shot) %>%
+  summarize(N_piaB= sum(piab_pos), N_test= n(), Pct_piab=round(mean(piab_pos)*100,1) )%>%
+  mutate( flu_shot = if_else(is.na(flu_shot), 'Missing',flu_shot) )
+
+t5 <- as_grouped_data(x = t5, groups = c("flu_shot"), columns = NULL)
 
 flextable(t5)
 ```
@@ -985,6 +997,11 @@ Test frequency of contact and N contacts age 1-10; each of which is associated i
 summary(mod1)
 ```
 
+```{r}
+   mod1 <- glm(piab_pos ~  diabetes +pneu_vax  +child_contact_24_59m + child_contact_5_10y, family='binomial', data=pcr_survey_mod)
+summary(mod1)
+```
+
 Generalized estimating equation to account for correlation within individuals
 
 ```{r, echo=T, eval=F}
@@ -1031,7 +1048,7 @@ q1 <- rbind(c( 0,0.01),
 
 l1 <- l1[order(l1$ID, l1$day),]
 
-l2 <- l1[, c('state','child_contact_u5','child_contact_1_5','child_contact','Gender','child_contact_u12m','child_contact_13_23m',"child_contact_24_59m","child_contact_5_10y",'child_contact_over10y','child_contact_1_10', 'ID','day', 'season','child_contact_often','child_contact_hours')] %>%
+l2 <- l1[, c('state','child_contact_u5','child_contact_1_5','child_contact','Gender','child_contact_u12m','child_contact_13_23m',"child_contact_24_59m","child_contact_5_10y",'child_contact_over10y','child_contact_1_10', 'ID','day', 'season','child_contact_often','child_contact_hours', 'diabetes')] %>%
   mutate(child_contact_2_10y = if_else( (child_contact_24_59m==1 |child_contact_5_10y==1) & child_contact !=9999,1,
                                        if_else(child_contact_24_59m==0  & child_contact_5_10y==0 & child_contact !=9999,0, 
                                                if_else(child_contact==9999 ,9999, 9999) ) ))
@@ -1070,6 +1087,19 @@ msm.mod1c
 #clearance rate as a function of child contacts?
 msm.mod1e <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list( "2-1" = ~ child_contact_1_10))
 msm.mod1e
+
+```
+
+Diabetes
+
+
+```{r}
+msm.mod0 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list( "1-2" = ~ diabetes))
+msm.mod0
+
+msm.mod0 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list( "2-1" = ~ diabetes))
+msm.mod0
+
 
 ```
 
