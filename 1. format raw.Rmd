@@ -201,10 +201,10 @@ s1 <- s1_data$survey_and_pcr_s1 %>%
   rename(flu_shot1=flu_shot) %>%
   mutate(flu_shot = if_else(flu_shot1=='Yes',1,
   if_else(flu_shot1=='No',2, NA_real_)),
-  diabetes = if_else(diabetes_meds=='Yes',1,
-  if_else(diabetes_meds=='No',2, NA_real_)),
-  asthma = if_else(asthma_meds=='Yes',1,
-  if_else(asthma_meds=='No',2, NA_real_))
+  diabetes = if_else(diabetes=='Yes',1,
+  if_else(diabetes=='No',2, NA_real_)),
+  asthma = if_else(asthma=='Yes',1,
+           if_else(asthma=='No',2, NA_real_))
   ) %>%
   select(ID, time, Household, lyta, piab,activities, activity_family, activity_friends, activity_community_center, acitivity_fitness,child_contact,child_contact_u12m,child_contact_13_23m,child_contact_24_59m ,child_contact_5_10y,child_contact_over10y , Age, Gender, Race, Ethnicity,child_contact_often,child_contact_hours,recent_abx,recent_runny_nose, recent_nasal,
          smoke_dic, pneu_vax_dic, flu_shot,education,diabetes, asthma)  %>%

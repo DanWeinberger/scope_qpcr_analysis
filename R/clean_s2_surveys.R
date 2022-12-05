@@ -43,9 +43,9 @@ s2_demographics_b <- read_excel('./Data/confidential/New Participants SCOPE_seas
 s2_demographics_b2 <- left_join(s2_demographics_b,s1_demographics, by="season 1 scope ID") %>%
   rename(ID=`season 2 scope ID`, s1_match=`season 1 scope ID`) %>%
   rename(pneu_vax1=pneu_vax,
-         immuno_meds1=immuno_meds,
-         diabetes_meds1=diabetes_meds,
-         asthma_meds1=asthma_meds,
+         immuno_meds1=immuno,
+         diabetes_meds1=diabetes,
+         asthma_meds1=asthma,
          flu_shot1=flu_shot
          ) %>%
   mutate(s1_match = paste0('S1_',s1_match),

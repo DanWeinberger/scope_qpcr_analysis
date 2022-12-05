@@ -59,21 +59,23 @@ names(q0c) <- names(q0a)
 q0c$`Date of Visit` <- parse_date_time(q0c$`Date of Visit`, orders=c('d-b-Y','d/b/Y','d-m-Y','m/d/Y','m/d/y','Y-m-d'))
 
 #combine the intake questionaire datasets
-q0 <- bind_rows(q0a, q0b, q0c) 
+q0 <- bind_rows(q0a, q0b, q0c) %>%
+  rename(immuno=`Have you taken any medications for or been told by a health care provider that you have any of th... - Q40#1 - 1.\tImmunodeficiency (Examples include: HIV/AIDS, corticosteroid medication like Prednisone, medicine or therapy to treat a cancerous tumor or mass, have had your spleen removed or have chronic kidney disease)`
+)
 
 select.colnames <- c('MRN', 
                      "SCOPE ID (eg. 0007, 0044, 0072 etc) if known/listed", 
                      "Date of Visit",
                      "Visit Location - Selected Choice",
                      "What is your date of birth? (DD-MM-YYYY)", 
-                     "1.     Are you experiencing any of the following symptoms today?   - Q8#1 - Nasal congestion",
-                     "1.     Are you experiencing any of the following symptoms today?   - Q8#1 - Coughing",
-                     "1.     Are you experiencing any of the following symptoms today?   - Q8#1 - Running nose",
-                     "1.     Are you experiencing any of the following symptoms today?   - Q8#1 - Sore throat", 
-                     "1.     Are you experiencing any of the following symptoms today?   - Q8#1 - Fever", 
-                     "1.    \nHave you had a positive test for COVID?",
-                     "If\nyes, when did you have this positive test? (DD-MM-YYYY)",
-                     "Have\nyou received the pneumonia vaccine?"  , 
+                     "Are you experiencing any of the following symptoms today? Nasal congestion",
+                     "Are you experiencing any of the following symptoms today? Coughing",
+                     "Are you experiencing any of the following symptoms today? Running nose",
+                     "Are you experiencing any of the following symptoms today? Sore throat", 
+                     "Are you experiencing any of the following symptoms today? Fever", 
+                     "\nHave you had a positive test for COVID?",
+                     "If yes,\r\nwhen did you receive this vaccine? (DD-MM-YYYY)",
+                     "Have\r\nyou received the pneumonia vaccine?"  , 
                      "If yes,\nwhen did you receive this vaccine? (DD-MM-YYYY)",
                      "Have\nyou been hospitalized for pneumonia in the last month (30 days)?" , 
                      "Have\nyou taken any antibiotics in the last month (30 days)?",  
@@ -90,7 +92,7 @@ select.colnames <- c('MRN',
                      "Have you had any of the following symptoms in the past 2 weeks? - Q39#1 - Running nose",
                      "Have you had any of the following symptoms in the past 2 weeks? - Q39#1 - Sore throat" ,
                      "Have you had any of the following symptoms in the past 2 weeks? - Q39#1 - Fever",
-                     "Have you taken any medications for or been told by a health care provider that you have any of th... - Q40#1 - 1.\tImmunodeficiency (Examples include: HIV/AIDS, corticosteroid medication like “Prednisone”, medicine or therapy to treat a cancerous tumor or mass, have had your spleen removed or have chronic kidney disease)",
+                     "immuno",
                      "Have you taken any medications for or been told by a health care provider that you have any of th... - Q40#1 - 2.\tDiabetes",
                      "Have you taken any medications for or been told by a health care provider that you have any of th... - Q40#1 - 5c. Chronic lung disease: Asthma",
                      "Do you currently smoke cigarettes or e-cigarrettes?",
@@ -101,28 +103,61 @@ select.colnames <- c('MRN',
                      "Time of sample collection:" 
 )
 
+
 q0 <- q0[,c(which(names(q0) %in% select.colnames),grep('Are you experiencing any of the following symptoms today', names(q0)) )]
 
 #q0b <- q0b[,c(which(names(q0b) %in% select.colnames),grep('Are you experiencing any of the following symptoms today', names(q0b)) )]
 
-rename.intake <- c('MRN','scope_id', 'visit_date','visit_location',
-                  'dob', 'pos_covid_past', 'pos_covid_date', 'pneu_vax', 
-                  'pneu_vax_date','pneumonia_hosp', 
-                  'recent_abx', 'weight','height',
-                  'education','ethnicity', 
-                  'hh_relationship', 
-                  'relationship_duration','hh_contact_time',
-                  'flu_shot', 'recent_nasal', 'recent_cough', 
-                  'recent_runny_nose', 'recent_sore_throat', 
-                  'recent_fever','immuno_meds','diabetes_meds',
-                  'asthma_meds', 'current_smoke', 
-                  'contact_children','age_child_contacts', 
-                  'frequency_child_contacts', 'time_day_child_contacts', 
-                  'time_sample', 'current_nasal','current_cough', 
-                  'current_runny_nose', 'current_sore_throat',
-                  'current_fever', 'other_symp1','othr_symp2')
 
-names(q0) <- rename.intake
+
+#rename intake 
+namekey <- c('MRN' = "MRN", 
+              "SCOPE ID (eg. 0007, 0044, 0072 etc) if known/listed"='scope_id' , 
+              "Date of Visit"='visit_date',
+              "Visit Location - Selected Choice"='visit_location',
+              "What is your date of birth? (DD-MM-YYYY)"='dob' , 
+              'Weight'='weight',
+             "Height (feet, inches)"= 'height'  ,
+             "What is your highest level of education?" ='education',
+             "How would you describe your ethnicity? - Selected Choice" ='ethnicity' ,
+             "What is the relationship between yourself and the person you are enrolling into the study with?"='relationship',
+            "How long have you been living together? - Years" = 'relationship_duration' ,
+             "How much time do you spend together each day? - ___ hours" ='relationship_time_day',
+              "Are you experiencing any of the following symptoms today? Nasal congestion"='current_nasal',
+              "Are you experiencing any of the following symptoms today? Coughing"='current_cough',
+             "Are you experiencing any of the following symptoms today? Running nose"= 'current_runny_nose',
+              "Are you experiencing any of the following symptoms today? Sore throat"='current_sore_throat', 
+              "Are you experiencing any of the following symptoms today? Fever" ='current_fever', 
+            'Are you experiencing any of the following symptoms today? Other (please list)'='other_symp',
+            "Are you experiencing any of the following symptoms today? Other (please list) - Text"='other_symp2',
+              "\nHave you had a positive test for COVID?"='ever_covid',
+              "If\nyes, when did you have this positive test? (DD-MM-YYYY)"='when_covid',
+             "Have\r\nyou received the pneumonia vaccine?" ='pneu_vax'  , 
+             "If yes,\r\nwhen did you receive this vaccine? (DD-MM-YYYY)"='pneu_vax_date',
+             "Have\nyou been hospitalized for pneumonia in the last month (30 days)?"='pneumonia_hosp' , 
+            
+              "Have\nyou taken any antibiotics in the last month (30 days)?"='recent_abx',  
+             "Have you received the flu shot this season?"= 'flu_shot',
+             "Have you had any of the following symptoms in the past 2 weeks? - Q39#1 - Nasal congestion"='recent_nasal' ,
+              "Have you had any of the following symptoms in the past 2 weeks? - Q39#1 - Coughing"='recent_cough',
+              "Have you had any of the following symptoms in the past 2 weeks? - Q39#1 - Running nose" ='recent_runny_nose',
+             "Have you had any of the following symptoms in the past 2 weeks? - Q39#1 - Sore throat" ='recent_sore_throat' ,
+             "Have you had any of the following symptoms in the past 2 weeks? - Q39#1 - Fever"='recent_fever',
+             "Do you have any regular contact with children?"='contact_children',
+             "What is the age range of the children you have had contact with? - Selected Choice" ='age_child_contacts',
+              "How often do you usually have contact with children?" ='frequency_child_contacts' ,
+             "How much contact per day do you have?" ='time_day_child_contacts',
+            "Time of sample collection:" = 'time_sample',
+            "immuno"='immuno',
+           "Have you taken any medications for or been told by a health care provider that you have any of th... - Q40#1 - 2.\tDiabetes"='diabetes',
+           "Have you taken any medications for or been told by a health care provider that you have any of th... - Q40#1 - 5c. Chronic lung disease: Asthma"="asthma",
+           "Do you currently smoke cigarettes or e-cigarrettes?"="current_smoke"
+           )
+#q0 <- as.data.frame(q0)
+names(q0) = namekey[names(q0)]
+
+#remove duplicate columns
+q0 <- q0[!duplicated(as.list(q0))]
 
 q0$visit_date[q0$visit_date %in% c( '12/APR/2021','12 Apr 2021','12/14/2021')] <- '2021-04-12'
 q0$visit_date <- parse_date_time(q0$visit_date, orders=c('d-b-Y','d/b/Y','d-m-Y','m/d/Y','m/d/y','Y-m-d'))
@@ -131,8 +166,7 @@ q0$visitN <- '1'
 q0$MRN <- as.numeric(gsub('MR','',q0$MRN))
 
 q0 <- q0 %>%
-  mutate( MRN=round(MRN),
-          MRN=if_else(MRN==414574,4149574, MRN),
+  dplyr::mutate( MRN=if_else(MRN==414574,4149574, MRN),
           MRN=if_else(MRN==121637,1212637, MRN),
           MRN=if_else(MRN==24915329,2495329, MRN) 
           ) %>%
@@ -142,6 +176,7 @@ q0 <- q0 %>%
   ungroup() %>%
   filter(repN==1)
 
+q0$MRN <- as.character(q0$MRN)
 #24915329
 
 #Fortnightly questionnaire and intake cleaning...do not run each time
@@ -199,7 +234,7 @@ q1 <- bind_rows(q1b0,q1b1, q1b2,q1b3) %>%
          recent_doctor,recent_vaccines,recent_vaccines_descr,
          sample_time,recent_abx,recent_nasal,recent_cough,recent_runny_nose)
   
-q0.baseline.vars <- c("pos_covid_past","pos_covid_date","pneu_vax", "pneu_vax_date",'ethnicity','weight','height','education', "immuno_meds" ,"diabetes_meds", "asthma_meds","flu_shot","hh_relationship", "relationship_duration")
+q0.baseline.vars <- c("pos_covid_past","pos_covid_date","pneu_vax", "pneu_vax_date",'ethnicity','weight','height','education', "immuno" ,"diabetes", "asthma","flu_shot","hh_relationship", "relationship_duration")
 
 q1$MRN <-  gsub("mr","", q1$MRN )
 q1$MRN <- as.character(as.numeric(gsub('MR','', q1$MRN)) )
@@ -353,7 +388,9 @@ e3$acitivity_fitness[is.na(e3$social_activity_type)] <- 9999
 #these two variables often had coding switched so combine
 e3$child_combined <- paste(e3$frequency_child_contacts, e3$time_day_child_contacts)
 
-q0_merge <- q0[,c('MRN','pneu_vax',"pneu_vax_date", 'education','diabetes_meds','immuno_meds','asthma_meds', 'flu_shot')]
+q0_merge <- q0[,c('MRN','pneu_vax',"pneu_vax_date", 'education','diabetes','immuno','asthma', 'flu_shot')]
+q0_merge$MRN <- as.character(q0_merge$MRN)
+
 e3 <- e3 %>%
   
   filter(!is.na(Household)) %>%
@@ -416,7 +453,7 @@ baseline_s1 <- key2 %>%
   mutate(MRN=if_else(MRN==" 6450061","6450061", MRN),
          MRN_cleaned = as.character(gsub('MR','',MRN))) %>%
   full_join(y=q0, by=c("MRN_cleaned"="MRN") ) %>%
-  dplyr::select(MRN_cleaned,`ID Number`,pneu_vax, pneu_vax_date,ethnicity,weight,height,education, immuno_meds ,current_smoke,diabetes_meds, asthma_meds,flu_shot) %>%
+  dplyr::select(MRN_cleaned,`ID Number`,pneu_vax, pneu_vax_date,ethnicity,weight,height,education, immuno ,current_smoke,diabetes, asthma,flu_shot) %>%
   rename(ID=`ID Number`) %>%
   full_join(demographics, by='ID') %>%
   mutate(Race2=if_else(is.na(Race2), ethnicity, Race2)) %>%

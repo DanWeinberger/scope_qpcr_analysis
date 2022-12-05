@@ -315,6 +315,19 @@ t5 <- as_grouped_data(x = t5, groups = c("diabetes"), columns = NULL)
 flextable(t5) 
 
 ```
+Diabetes status--lyta 
+
+```{r}
+t5 <- pcr_survey %>%
+  group_by(diabetes) %>%
+  summarize(N_lyta= sum(lyta_pos), N_test= n(), Pct_lyta=round(mean(lyta_pos)*100,1) ) %>%
+  mutate(diabetes = if_else(is.na(diabetes),999, diabetes))
+
+t5 <- as_grouped_data(x = t5, groups = c("diabetes"), columns = NULL)
+
+flextable(t5) 
+
+```
 
 Asthma status 
 
@@ -1298,7 +1311,7 @@ q1 <- rbind(c( 0,0.01),
 
 l1 <- l1[order(l1$ID, l1$day),]
 
-l2 <- l1[, c('state','Gender','child_contact_1_10', 'ID','day','colonized_partner_prev')]                
+l2 <- l1[, c('state','Gender','child_contact_1_10', 'ID','day','colonized_partner_prev', 'diabetes')]                
 
 table(l2$state, l2$colonized_partner_prev)
 
@@ -1307,6 +1320,10 @@ msm.mod0
 msm.mod1 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ colonized_partner_prev ))
 
 msm.mod1
+
+
+# msm.mod1 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("2-1" = ~ diabetes ))
+# msm.mod1
 ```
 
 
