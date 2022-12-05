@@ -998,7 +998,7 @@ summary(mod1)
 ```
 
 ```{r}
-   mod1 <- glm(piab_pos ~  diabetes +pneu_vax  +child_contact_24_59m + child_contact_5_10y, family='binomial', data=pcr_survey_mod)
+   mod1 <- glm(piab_pos ~  diabetes +pneu_vax  +child_contact_often+child_contact_u12m + child_contact_13_23m + child_contact_24_59m + child_contact_5_10y + child_contact_over10y, family='binomial', data=pcr_survey_mod)
 summary(mod1)
 ```
 
