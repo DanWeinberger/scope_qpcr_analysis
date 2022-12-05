@@ -976,6 +976,21 @@ flextable(t16)
 - UAD results – how will these be incorporated into the analysis?
 
 
+Concentration of bacteria in those with piaB or lytA pos
+
+```{r}
+pcr_survey %>%
+  filter(piab_pos==1) %>%
+  group_by(diabetes) %>%
+  summarize(piab=mean(piab))
+
+pcr_survey %>%
+  filter(lyta_pos==1) %>%
+  group_by(diabetes) %>%
+  summarize(lyta=mean(lyta))
+```
+
+
 ### Regression models
 
 Evaluate correlates of pneumococcal positivity.
