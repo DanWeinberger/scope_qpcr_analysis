@@ -1263,7 +1263,7 @@ msm.mod1
 ```
 
 
-as a test, try same analysis using lyta as the outcome. This is problematic because we cannot distrinuish lyta strains, but might give some hint.
+as a test, try same analysis using lyta as the outcome. This is problematic because we cannot distinguish lyta strains, but might give some hint.
 ```{r}
 mod.df <- pcr_survey %>%
   filter( !is.na(lyta_pos)) %>%
@@ -1322,8 +1322,11 @@ msm.mod1 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = li
 msm.mod1
 
 
-# msm.mod1 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("2-1" = ~ diabetes ))
-# msm.mod1
+ msm.mod1 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ diabetes ))
+ msm.mod1
+ 
+ msm.mod1 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("2-1" = ~ diabetes ))
+ msm.mod1
 ```
 
 
