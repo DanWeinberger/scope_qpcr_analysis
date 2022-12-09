@@ -118,7 +118,14 @@ c1 <- b1[, c('Sample','Cq','Target','plate')]
 
 c1$Cq[is.na(c1$Cq)] <- 45
 
-c1.m <- reshape2::melt(c1, id.vars= c('Sample','Target','plate'))
+c1 <- c1 %>%
+  group_by(Sample ,Target) %>%
+  mutate(repN=row_number())
+
+c1.rep <- reshape2::dcast(c1 ,  Target+Sample   ~ repN , value.var='Cq')
+write.csv(c1.rep,'./Data/ct_by_sample_rep.csv')
+
+c1.m <- reshape2::melt(c1, id.vars= c('Sample','Target','plate', 'repN'))
 
 ##If sample tested multiple times call pos if pos on multiple runs. Ct<40=pos
 
@@ -143,7 +150,7 @@ c1.m$ct_pos2[c1.m$N_tests>=2 & c1.m$n_pos>= 2 & c1.m$ct_min > 35] <-
   c1.m$ct_pos[c1.m$N_tests>=2 & c1.m$n_pos>= 2 & c1.m$ct_min > 35] #if 2 or more tests, and 0 or 1 are weakly positive or neg, then call it negative
 
 #if min Ct>35, N tests is <=2 and only 1 positive, call it negative
-c1.m$ct_pos2[c1.m$N_tests<=2 & c1.m$n_pos< c1.m$N_tests] <- 45 #if 2 or fewer tests, and at least 1 is positive, call positive
+c1.m$ct_pos2[c1.m$N_tests<=2 & c1.m$n_pos< c1.m$N_tests & c1.m$ct_min > 35] <- 45 #if 2 or fewer tests, and at least 1 is positive, call positive
 
 
 c1.c <- reshape2::dcast(c1.m[,c('Sample','variable','Target','ct_pos2')], Sample +variable ~ Target, fun.aggregate = min, fill=9999, value.var='ct_pos2')

@@ -891,6 +891,8 @@ Out of curiousity, break down the table of pneumo poisitivity by contact frequen
 
 ```{r}
 t17  <- pcr_survey %>%
+    mutate(child_contact_often= if_else(is.na(child_contact_often),999,child_contact_often)) %>%
+
   group_by(Gender, child_contact_often ) %>%
   summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
 
