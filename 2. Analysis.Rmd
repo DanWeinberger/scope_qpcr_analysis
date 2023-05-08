@@ -70,7 +70,7 @@ diabetes <- pcr_survey %>%
   filter(hh_diabetes>=1) %>%
   select(ID,time, Household, diabetes, lyta, piab, piab_pos) %>%
   ungroup() %>%
-  group_by(ID,time, Household) %>%
+  group_by(ID,time, Household, diabetes) %>%
   summarize(piab=mean(piab, na.rm=T), lyta=mean(lyta, na.rm=T))
 
 write.csv(diabetes, './Data/diabetes.csv')
@@ -314,10 +314,13 @@ flextable(t5)
 
 ```
 
-Diabetes status 
+Diabetes status  (fills in the missing values when people have missing on some surveys, nonmissing on others)
 
 ```{r}
 t5 <- pcr_survey %>%
+  group_by(ID) %>%
+  mutate(diabetes=sum(diabetes, na.rm=T), diabetes=if_else(diabetes>1,1,0)) %>%
+  ungroup() %>%
   group_by(diabetes) %>%
   summarize(N_piaB= sum(piab_pos), N_test= n(), Pct_piab=round(mean(piab_pos)*100,1) ) %>%
   mutate(diabetes = if_else(is.na(diabetes),999, diabetes))
