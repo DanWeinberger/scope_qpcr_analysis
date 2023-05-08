@@ -66,9 +66,12 @@ pcr_survey <- readRDS('./Data./pcr_survey_combined.rds') %>%
 
 diabetes <- pcr_survey %>%
   group_by(Household) %>%
-  mutate(hh_diabetes=max(diabetes)) %>%
+  mutate(hh_diabetes=sum(diabetes, na.rm=T)) %>%
   filter(hh_diabetes>=1) %>%
-  select(ID, Household, diabetes, lyta, piab)
+  select(ID,time, Household, diabetes, lyta, piab, piab_pos) %>%
+  ungroup() %>%
+  group_by(ID,time, Household) %>%
+  summarize(piab=mean(piab, na.rm=T), lyta=mean(lyta, na.rm=T))
 
 write.csv(diabetes, './Data/diabetes.csv')
 ```
@@ -310,6 +313,7 @@ t5 <- as_grouped_data(x = t5, groups = c("pneu_vax"), columns = NULL)
 flextable(t5) 
 
 ```
+
 Diabetes status 
 
 ```{r}
