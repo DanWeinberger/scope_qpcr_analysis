@@ -63,6 +63,14 @@ pcr_survey <- readRDS('./Data./pcr_survey_combined.rds') %>%
          lyta_pos = if_else(lyta < 40,1,0), 
          season=substr(ID,1,2),
           Gender=if_else(ID=='S2_77' & is.na(Gender), 'F',Gender))
+
+diabetes <- pcr_survey %>%
+  group_by(Household) %>%
+  mutate(hh_diabetes=max(diabetes)) %>%
+  filter(hh_diabetes>=1) %>%
+  select(ID, Household, diabetes, lyta, piab)
+
+write.csv(diabetes, './Data/diabetes.csv')
 ```
 
 Age summary
