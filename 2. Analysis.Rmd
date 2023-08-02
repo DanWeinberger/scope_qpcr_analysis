@@ -119,6 +119,7 @@ tab1 <- table1( ~Age + Gender + Race +Ethnicity + activity_family + activity_fri
 tab1 <- as.data.frame(tab1)
 flextable(tab1)
 
+
 ```
 
 
@@ -174,7 +175,12 @@ t1 <- pcr_summary_long %>%
   filter(piab != 9999) %>%
   mutate(piab_pos = if_else(piab < 40,1,0),
          lyta_pos = if_else(lyta < 40,1,0)) %>%
-  summarize(N_piaB= sum(piab_pos), N_test= n(), `Percent piab`=round(mean(piab_pos)*100,2) )
+  summarize(N_piaB= sum(piab_pos), N_test= n(),
+            N_lytA= sum(lyta_pos), 
+            `Percent piab`=round(mean(piab_pos)*100,2),
+            `Percent lyta`=round(mean(lyta_pos)*100,2) 
+
+            )
 
 flextable(t1)
 ```
@@ -188,7 +194,7 @@ t2 <- pcr_summary_long %>%
   mutate(piab_pos = if_else(piab < 40,1,0),
          lyta_pos = if_else(lyta < 40,1,0), season=substr(ID,1,2)) %>%
   group_by(season) %>%
-  summarize(N_piaB= sum(piab_pos), N_test= n(), Pct_piab=round(mean(piab_pos)*100,1) )
+  summarize(N_piaB= sum(piab_pos), N_test= n(), Pct_piab=round(mean(piab_pos)*100,1),Pct_lyta=round(mean(lyta_pos)*100,1) )
 
 flextable(t2)
 ```
