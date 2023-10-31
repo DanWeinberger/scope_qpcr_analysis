@@ -207,6 +207,69 @@ d1.ds <- d1.ds %>%
   group_by(Household ) %>%
   mutate(HH_order= as.numeric(as.factor(ID))) %>%
   ungroup()
+
+##MANUALLY UPDATE S2 RESULTS BASED ON AUDIT BY ANNE WYLLIE (OCT 31, 2023):
+
+d1.ds <- d1.ds %>%
+  mutate(  piab = if_else(ID=='S2_2' & time==6, 38.34,
+                  if_else(ID=='S2_24' & time==2, 38.62, 
+                  if_else(ID=='S2_25' & time==1, 32.46,
+                  if_else(ID=='S2_25' & time==2, 30.21,         
+                  if_else(ID=='S2_25' & time==3, 31,       
+                  if_else(ID=='S2_25' & time==4, 31.32,        
+                  if_else(ID=='S2_25' & time==6, 32.45,         
+                  if_else(ID=='S2_27' & time==2, 36.37,         
+                  if_else(ID=='S2_28' & time==1, 28.18,         
+                  if_else(ID=='S2_28' & time==2, 35.92,         
+                  if_else(ID=='S2_28' & time==5, 32.09,         
+                  if_else(ID=='S2_35' & time==5, 30.77,
+                  if_else(ID=='S2_35' & time==6, 31.91,
+                  if_else(ID=='S2_36' & time==5, 37.23,               
+                  if_else(ID=='S2_40' & time==6, 38.58,       
+                  if_else(ID=='S2_41' & time==6, 36.07,         
+                  if_else(ID=='S2_48' & time==6, 38.6,         
+                  if_else(ID=='S2_49' & time==5, 38.27,         
+                  if_else(ID=='S2_50' & time==5, 38.9,         
+                  if_else(ID=='S2_61' & time==3, 38.8,         
+                  if_else(ID=='S2_70' & time==3, 23.09,                                                         
+                  if_else(ID=='S2_89' & time==2, 45 ,
+                          piab
+                                  )))))))))))))))))))))),
+                  lyta = if_else(ID=='S2_2' & time==6, 38.28,
+                  if_else(ID=='S2_24' & time==2, 45, 
+                  if_else(ID=='S2_25' & time==1, 30.26,
+                  if_else(ID=='S2_25' & time==2, 29.3,         
+                  if_else(ID=='S2_25' & time==3, 29.26,       
+                  if_else(ID=='S2_25' & time==4, 29.98,        
+                  if_else(ID=='S2_25' & time==6, 30.01,         
+                  if_else(ID=='S2_27' & time==2, 36.53,         
+                  if_else(ID=='S2_28' & time==1, 27.55,         
+                  if_else(ID=='S2_28' & time==2, 34.63,         
+                  if_else(ID=='S2_28' & time==5, 31.03,         
+                  if_else(ID=='S2_35' & time==5, 28.45,
+                  if_else(ID=='S2_35' & time==6, 29.36,
+                  if_else(ID=='S2_36' & time==5, 45,               
+                  if_else(ID=='S2_40' & time==6, 25.08,       
+                  if_else(ID=='S2_41' & time==6, 36.15,         
+                  if_else(ID=='S2_48' & time==6, 45,         
+                  if_else(ID=='S2_49' & time==5, 37.33,         
+                  if_else(ID=='S2_50' & time==5, 45,         
+                  if_else(ID=='S2_61' & time==3, 37.33,         
+                  if_else(ID=='S2_70' & time==3, 22.22,                                                         
+                  if_else(ID=='S2_89' & time==2,  45,
+                          lyta
+                                  )))))))))))))))))))))),          
+
+           )
+
+# d1.ds %>%
+#   filter(substr(ID,1,2)=='S2' &piab<=45) %>%
+#   ggplot(aes(x=piab, y=pia_update)) +
+#     geom_point() +
+#   geom_hline(yintercept=35) +
+#   geom_vline(xintercept=35) +
+#   theme_classic()
+
 saveRDS(d1.ds, './data/PCR_compiled.rds')
 
 out.list <- list('clean_pcr'=d1.ds,  'pcr_summary'=c1.m, 'pcr_summary_long'=c1.c)
