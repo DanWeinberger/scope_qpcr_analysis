@@ -32,6 +32,7 @@ ds.plot <- ds.plot %>%
   filter(!is.na(sampleID))
 
 ds.plot$labels <- paste(ds.plot$season, ds.plot$seasonid, sep='_')
+write.csv(ds.plot,'./Data/heat.table.csv')
 sub1 <- ds.plot[1:cut3,] 
 gap1 <- which(sub1$HH_order==1) +1
 gap1 <- gap1[-length(gap1)]

@@ -110,7 +110,7 @@ s2_a <- s2_a %>%
   filter(repN==1 & !is.na(Household)) %>%
   ungroup()
 
-N_contacts <- dcast(s2_a[c('ID','time','child_contact')], ID~time, fun.aggregate = max, na.rm=T, fill=9999)
+N_contacts <- dcast(s2_a[c('ID','time','child_contact')], ID~time, fun.aggregate = max, na.rm=T, fill=9999, value.var='child_contact')
 
 out.list <- list('survey_and_pcr_s2'=s2_a,'contacts_wide_s2'=N_contacts)
 

@@ -285,8 +285,9 @@ write.csv(q2, './data/confidential/survey_data_to_clean.csv')
 
 ##Summary of which people are missing which days
 q2.m <- reshape2::melt(q2[, c('MRN_cleaned','visitN') ], id.vars=c('MRN_cleaned','visitN'))
-q2.c <- reshape2::dcast(q2.m, MRN_cleaned ~visitN, fun.aggregate = length)
+q2.c <- reshape2::dcast(q2.m, MRN_cleaned ~visitN, fun.aggregate = length, value.var='visitN')
 write.csv(q2.c,'./Data/confidential/MRN_surveys_missing.csv')
+
 #q2 <- q2[,-which(names(q2) %in% q0.baseline.vars)] #baseline vars are messed up in merge
 
 #Merge in scope ID with the MRN

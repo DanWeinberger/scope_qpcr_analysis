@@ -998,6 +998,10 @@ flextable(t16)
 - Comparison of genetic lineages for serotypes identified among pairs
 - UAD results – how will these be incorporated into the analysis?
 
+```{r}
+
+```
+
 
 Concentration of bacteria in those with piaB or lytA pos
 
