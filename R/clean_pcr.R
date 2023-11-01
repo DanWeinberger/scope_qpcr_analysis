@@ -201,74 +201,96 @@ c1.m <- c1.m[!(c1.m$ID %in% c('S1_38','S1_39', 'S1_48','S1_49', 'S1_58', 'S1_59'
 
 d1.a <- acast(c1.m[,c('ID','Target','time','ct_pos2','Household')], Target ~ ID +Household ~ time, fun.aggregate=min, na.rm=T, fill=9999, value.var = 'ct_pos2')
 
-d1.ds <- reshape2::dcast(c1.m[,c('ID','Target','time','ct_pos2','Household')],   Household +ID+ time ~ Target, fun.aggregate=min, na.rm=T, fill=9999, value.var = 'ct_pos2')
+d1.ds.a <- reshape2::dcast(c1.m[,c('ID','Target','time','ct_pos2','Household')],   Household +ID+ time ~ Target, fun.aggregate=min, na.rm=T, fill=9999, value.var = 'ct_pos2')
 
-d1.ds <- d1.ds %>%
+d1.ds.a <- d1.ds.a %>%
   group_by(Household ) %>%
   mutate(HH_order= as.numeric(as.factor(ID))) %>%
   ungroup()
 
-##MANUALLY UPDATE S2 RESULTS BASED ON AUDIT BY ANNE WYLLIE (OCT 31, 2023):
+## UPDATE RESULTS BASED ON AUDIT BY ANNE WYLLIE (OCT 31, 2023):
+##These are adjudicated after restesting with higher volume extraction from sample
+s1_audit <- read_excel('./Data/Anne_adjudicated_files/season1.xlsx')
+s2_audit <- read_excel('./Data/Anne_adjudicated_files/season2.xlsx')
+combine_audit_pos <- bind_rows(s1_audit, s2_audit) %>%
+  rename(time=week, 
+         lyta_valid=lytA_ct,
+          piab_valid=piab_ct  ) %>%
+  mutate(ID=paste0('S',season,'_', participant)) %>%
+  dplyr::select(time, ID, lyta_valid, piab_valid) 
 
-d1.ds <- d1.ds %>%
-  mutate(  piab = if_else(ID=='S2_2' & time==6, 38.34,
-                  if_else(ID=='S2_24' & time==2, 38.62, 
-                  if_else(ID=='S2_25' & time==1, 32.46,
-                  if_else(ID=='S2_25' & time==2, 30.21,         
-                  if_else(ID=='S2_25' & time==3, 31,       
-                  if_else(ID=='S2_25' & time==4, 31.32,        
-                  if_else(ID=='S2_25' & time==6, 32.45,         
-                  if_else(ID=='S2_27' & time==2, 36.37,         
-                  if_else(ID=='S2_28' & time==1, 28.18,         
-                  if_else(ID=='S2_28' & time==2, 35.92,         
-                  if_else(ID=='S2_28' & time==5, 32.09,         
-                  if_else(ID=='S2_35' & time==5, 30.77,
-                  if_else(ID=='S2_35' & time==6, 31.91,
-                  if_else(ID=='S2_36' & time==5, 37.23,               
-                  if_else(ID=='S2_40' & time==6, 38.58,       
-                  if_else(ID=='S2_41' & time==6, 36.07,         
-                  if_else(ID=='S2_48' & time==6, 38.6,         
-                  if_else(ID=='S2_49' & time==5, 38.27,         
-                  if_else(ID=='S2_50' & time==5, 38.9,         
-                  if_else(ID=='S2_61' & time==3, 38.8,         
-                  if_else(ID=='S2_70' & time==3, 23.09,                                                         
-                  if_else(ID=='S2_89' & time==2, 45 ,
-                          piab
-                                  )))))))))))))))))))))),
-                  lyta = if_else(ID=='S2_2' & time==6, 38.28,
-                  if_else(ID=='S2_24' & time==2, 45, 
-                  if_else(ID=='S2_25' & time==1, 30.26,
-                  if_else(ID=='S2_25' & time==2, 29.3,         
-                  if_else(ID=='S2_25' & time==3, 29.26,       
-                  if_else(ID=='S2_25' & time==4, 29.98,        
-                  if_else(ID=='S2_25' & time==6, 30.01,         
-                  if_else(ID=='S2_27' & time==2, 36.53,         
-                  if_else(ID=='S2_28' & time==1, 27.55,         
-                  if_else(ID=='S2_28' & time==2, 34.63,         
-                  if_else(ID=='S2_28' & time==5, 31.03,         
-                  if_else(ID=='S2_35' & time==5, 28.45,
-                  if_else(ID=='S2_35' & time==6, 29.36,
-                  if_else(ID=='S2_36' & time==5, 45,               
-                  if_else(ID=='S2_40' & time==6, 25.08,       
-                  if_else(ID=='S2_41' & time==6, 36.15,         
-                  if_else(ID=='S2_48' & time==6, 45,         
-                  if_else(ID=='S2_49' & time==5, 37.33,         
-                  if_else(ID=='S2_50' & time==5, 45,         
-                  if_else(ID=='S2_61' & time==3, 37.33,         
-                  if_else(ID=='S2_70' & time==3, 22.22,                                                         
-                  if_else(ID=='S2_89' & time==2,  45,
-                          lyta
-                                  )))))))))))))))))))))),          
+d1.ds.b <- d1.ds.a %>%
+  full_join(combine_audit_pos, by=c('ID','time')) %>%
+  mutate(lyta_valid = if_else(is.na(lyta_valid),45, lyta_valid),
+         piab_valid = if_else(is.na(piab_valid),45, piab_valid),
+         )
 
-           )
+d1.ds.b %>%
+  filter(piab<=45) %>%
+  ggplot(aes(x=piab, y=piab_valid)) +
+  geom_point() +
+  geom_hline(yintercept=35) +
+  geom_vline(xintercept=35) +
+  theme_classic()
 
-# d1.ds %>%
-#   filter(substr(ID,1,2)=='S2' &piab<=45) %>%
-#   ggplot(aes(x=piab, y=pia_update)) +
-#     geom_point() +
-#   geom_hline(yintercept=35) +
-#   geom_vline(xintercept=35) +
-#   theme_classic()
+
+d1.ds <- d1.ds.b %>%
+  mutate( lyta = lyta_valid,
+          piab=piab_valid) %>%
+  dplyr::select(Household, ID, time, lyta, piab, HH_order)
+# d1.ds <- d1.ds %>%
+#   mutate(  piab = if_else(ID=='S2_2' & time==6, 38.34,
+#                   if_else(ID=='S2_24' & time==2, 38.62, 
+#                   if_else(ID=='S2_25' & time==1, 32.46,
+#                   if_else(ID=='S2_25' & time==2, 30.21,         
+#                   if_else(ID=='S2_25' & time==3, 31,       
+#                   if_else(ID=='S2_25' & time==4, 31.32,        
+#                   if_else(ID=='S2_25' & time==6, 32.45,         
+#                   if_else(ID=='S2_27' & time==2, 36.37,         
+#                   if_else(ID=='S2_28' & time==1, 28.18,         
+#                   if_else(ID=='S2_28' & time==2, 35.92,         
+#                   if_else(ID=='S2_28' & time==5, 32.09,         
+#                   if_else(ID=='S2_35' & time==5, 30.77,
+#                   if_else(ID=='S2_35' & time==6, 31.91,
+#                   if_else(ID=='S2_36' & time==5, 37.23,               
+#                   if_else(ID=='S2_40' & time==6, 38.58,       
+#                   if_else(ID=='S2_41' & time==6, 36.07,         
+#                   if_else(ID=='S2_48' & time==6, 38.6,         
+#                   if_else(ID=='S2_49' & time==5, 38.27,         
+#                   if_else(ID=='S2_50' & time==5, 38.9,         
+#                   if_else(ID=='S2_61' & time==3, 38.8,         
+#                   if_else(ID=='S2_70' & time==3, 23.09,                                                         
+#                   if_else(ID=='S2_89' & time==2, 45 ,
+#                           piab
+#                                   )))))))))))))))))))))),
+#                   lyta = if_else(ID=='S2_2' & time==6, 38.28,
+#                   if_else(ID=='S2_24' & time==2, 45, 
+#                   if_else(ID=='S2_25' & time==1, 30.26,
+#                   if_else(ID=='S2_25' & time==2, 29.3,         
+#                   if_else(ID=='S2_25' & time==3, 29.26,       
+#                   if_else(ID=='S2_25' & time==4, 29.98,        
+#                   if_else(ID=='S2_25' & time==6, 30.01,         
+#                   if_else(ID=='S2_27' & time==2, 36.53,         
+#                   if_else(ID=='S2_28' & time==1, 27.55,         
+#                   if_else(ID=='S2_28' & time==2, 34.63,         
+#                   if_else(ID=='S2_28' & time==5, 31.03,         
+#                   if_else(ID=='S2_35' & time==5, 28.45,
+#                   if_else(ID=='S2_35' & time==6, 29.36,
+#                   if_else(ID=='S2_36' & time==5, 45,               
+#                   if_else(ID=='S2_40' & time==6, 25.08,       
+#                   if_else(ID=='S2_41' & time==6, 36.15,         
+#                   if_else(ID=='S2_48' & time==6, 45,         
+#                   if_else(ID=='S2_49' & time==5, 37.33,         
+#                   if_else(ID=='S2_50' & time==5, 45,         
+#                   if_else(ID=='S2_61' & time==3, 37.33,         
+#                   if_else(ID=='S2_70' & time==3, 22.22,                                                         
+#                   if_else(ID=='S2_89' & time==2,  45,
+#                           lyta
+#                                   )))))))))))))))))))))),          
+# 
+#            )
+
+
 
 saveRDS(d1.ds, './data/PCR_compiled.rds')
 

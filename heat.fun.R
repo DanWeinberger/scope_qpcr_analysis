@@ -21,7 +21,7 @@ ds1 <- ds1 %>%
   mutate(sampleID=cur_group_id()) %>%
   ungroup() %>%
   group_by(season,seasonhh) %>%
-  mutate(house=group_indices()) %>%
+  mutate(house=cur_group_id()) %>%
   ungroup() %>% 
  arrange(season,seasonhh, seasonid)
 
@@ -82,7 +82,9 @@ heat3<-pheatmap(sub3[,c('1','2','3','4','5','6')],
                 legend=F,
                 labels_col = weeks)
 
-sub4 <- ds.plot[(cut5+1):nrow(ds.plot),] 
+sub4 <- ds.plot[(cut5+1):nrow(ds.plot),]  %>%
+  filter(labels !='S2_NA')
+
 gap4 <- which(sub4$HH_order==1) +1
 gap4 <- gap4[-length(gap4)]
 
