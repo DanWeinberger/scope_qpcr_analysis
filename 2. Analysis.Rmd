@@ -52,7 +52,9 @@ In the laboratory, saliva was culture enriched and tested for *lytA* and *piaB w
 ### Descriptive statistics
 
 ```{r}
-pcr_summary_long <- readRDS('./Data/PCR_compiled.rds')
+pcr_summary_long <- readRDS('./Data/PCR_compiled.rds') %>%
+  mutate(ID = gsub('ctl','',ID)) %>%
+  filter(ID!='S2_102')
 
 pcr_survey <- readRDS('./Data./pcr_survey_combined.rds') %>%
   mutate(Gender = if_else(Gender %in% c('F','Female'),'F',Gender),
@@ -107,7 +109,7 @@ unique.age %>%
 ```{r}
 
 
-first_visit <- pcr_survey %>% filter(time==1) %>%
+first_visit <- pcr_survey %>% filter(time==1 | (ID=='S1_6' & time==2)) %>%
   mutate(Race=tolower(Race), Ethnicity=tolower(Ethnicity), smoke=as.factor(smoke), pneu_vax=as.factor(pneu_vax), flu_shot=as.factor(flu_shot) ,  asthma=as.factor(asthma),
          education=toupper(education),
          education_level= if_else(grepl('HIGH', education) |
@@ -893,7 +895,7 @@ frequency of contact vs pneumo positivity
 1, Daily | 
 2, Every few days | 
 3, Once or twice a month
-This makes sense--more common contatct, more carriage
+This makes sense--more frequent contatct, more carriage
 
 N_pos is the number of positives for that level of contact frequency; pct_pos is percent positive for that level
 
@@ -918,7 +920,7 @@ table(tab1$child_contact_often, tab1$child_contact_hours)
 
 ```
 
-Out of curiousity, break down the table of pneumo poisitivity by contact frequency AND gender. This is interesting; women who have daily contact have super high prevalence; men not so much. 
+Out of curiousity, break down the table of pneumo poisitivity by contact frequency AND gender. kind of interesting--me who have frequent contact have hiighest prev; but numbers are very small
 
 ```{r}
 t17  <- pcr_survey %>%

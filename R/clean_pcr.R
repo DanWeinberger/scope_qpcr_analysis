@@ -204,12 +204,16 @@ d1.a <- acast(c1.m[,c('ID','Target','time','ct_pos2','Household')], Target ~ ID 
 d1.ds.a <- reshape2::dcast(c1.m[,c('ID','Target','time','ct_pos2','Household')],   Household +ID+ time ~ Target, fun.aggregate=min, na.rm=T, fill=9999, value.var = 'ct_pos2')
 
 d1.ds.a <- d1.ds.a %>%
+  mutate(seasonid =as.numeric(substring(ID, 4)),
+         seasonhh= as.numeric(substring(Household, 4))) %>%
+  arrange(seasonid, seasonhh) %>%
   group_by(Household ) %>%
   mutate(HH_order= as.numeric(as.factor(ID))) %>%
   ungroup()
 
 ## UPDATE RESULTS BASED ON AUDIT BY ANNE WYLLIE (OCT 31, 2023):
-##These are adjudicated after restesting with higher volume extraction from sample
+##These are adjudicated after restesting with higher volume extraction from sample.
+#The sheet includes piaB positive samples
 s1_audit <- read_excel('./Data/Anne_adjudicated_files/season1.xlsx')
 s2_audit <- read_excel('./Data/Anne_adjudicated_files/season2.xlsx')
 combine_audit_pos <- bind_rows(s1_audit, s2_audit) %>%
@@ -221,13 +225,20 @@ combine_audit_pos <- bind_rows(s1_audit, s2_audit) %>%
 
 d1.ds.b <- d1.ds.a %>%
   full_join(combine_audit_pos, by=c('ID','time')) %>%
-  mutate(lyta_valid = if_else(is.na(lyta_valid),45, lyta_valid),
+  mutate(lyta_valid = if_else(is.na(lyta_valid),lyta, lyta_valid), # if lytA is missing, might just be piab pos and not on sheet
          piab_valid = if_else(is.na(piab_valid),45, piab_valid),
          )
 
 d1.ds.b %>%
   filter(piab<=45) %>%
   ggplot(aes(x=piab, y=piab_valid)) +
+  geom_point() +
+  geom_hline(yintercept=35) +
+  geom_vline(xintercept=35) +
+  theme_classic()
+d1.ds.b %>%
+  filter(lyta<=45) %>%
+  ggplot(aes(x=lyta, y=lyta_valid)) +
   geom_point() +
   geom_hline(yintercept=35) +
   geom_vline(xintercept=35) +

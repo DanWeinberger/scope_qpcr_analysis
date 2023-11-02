@@ -1,38 +1,44 @@
 
 heat.fun <- function( target='piab', cut1=15, cut2=45, cut3 = 47, cut4=95,cut5=141){
 #ds1 <- data.array[target,,]
-ds1 <- clean_pcr$clean_pcr
-ds1$lyta[ds1$lyta==9999] <- NA
-ds1$piab[ds1$piab==9999] <- NA
-
-ds1 <- ds1 %>%
-  filter(ID !='S2_NA')
-
-breakslist<-seq(cut1,cut2,by=1)
-
-weeks<- paste0('Week ', c(0,2,4,6,8,10)) 
-
-ds1$season <- substr(ds1$ID,1,2)
-ds1$seasonid <- as.numeric(substring(ds1$ID, 4))
-ds1$seasonhh <- as.numeric(substring(ds1$Household, 4))
-
-ds1 <- ds1 %>%
+ds1 <- clean_pcr$clean_pcr %>%
+  mutate( lyta= if_else( lyta==9999,NA_real_, lyta),
+          piab= if_else( piab==9999,NA_real_, piab),
+          season = substr(ID,1,2),
+          seasonid =as.numeric(substring(ID, 4)),
+          seasonhh= as.numeric(substring(Household, 4))
+          ) %>%
+  filter(ID !='S2_NA') %>%
+  arrange(season, seasonid) %>%
   group_by(season, seasonid, seasonhh) %>% 
   mutate(sampleID=cur_group_id()) %>%
   ungroup() %>%
   group_by(season,seasonhh) %>%
   mutate(house=cur_group_id()) %>%
   ungroup() %>% 
- arrange(season,seasonhh, seasonid)
+  arrange(season,seasonhh, seasonid)
 
 
-ds.plot <- dcast(ds1, house+sampleID + season + seasonid + seasonhh +HH_order~time, value.var = target)
+breakslist<-seq(cut1,cut2,by=1)
+
+weeks<- paste0('Week ', c(0,2,4,6,8,10)) 
+
+
+
+
+
+ds.plot <- dcast(ds1, house+ season +sampleID+ seasonid + seasonhh +HH_order~time, value.var = target)
 
 ds.plot <- ds.plot %>%
-  filter(!is.na(sampleID))
+  filter(!is.na(sampleID)) %>%
+  arrange(season,seasonhh,seasonid ) %>%
+  group_by(season,seasonhh) %>%
+  mutate(HH_order=row_number()) %>%
+  ungroup()
 
 ds.plot$labels <- paste(ds.plot$season, ds.plot$seasonid, sep='_')
 write.csv(ds.plot,'./Data/heat.table.csv')
+
 sub1 <- ds.plot[1:cut3,] 
 gap1 <- which(sub1$HH_order==1) +1
 gap1 <- gap1[-length(gap1)]
