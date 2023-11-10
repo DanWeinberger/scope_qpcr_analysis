@@ -748,17 +748,24 @@ msm.mod5
 
 We have a number of participants in both seasons
 
-```{r, fig.width=6, fig.height=8}
+```{r, fig.width=6, fig.height=9}
 
-s1_repeats <- unique(ds.c$s1_match) #which people from S1 are also in S2?
+#fixes error on key
+ds.c2 <- ds.c %>%
+  mutate(s1_match = if_else(ID=='S2_26','S1_93', s1_match),
+         s1_match = if_else(ID=='S2_25','S1_92', s1_match),
+         s1_match = if_else(ID=='S2_55','S1_57', s1_match),
+        s1_match = if_else(ID=='S2_56','S1_56', s1_match)
+         
+         )
+s1_repeats <- unique(ds.c2$s1_match) #which people from S1 are also in S2?
 
 
-repeat_people <- ds.c %>%
+repeat_people <- ds.c2 %>%
   filter( ID %in% s1_repeats |  !is.na(s1_match)) %>%
   mutate( Season_sample = if_else( is.na(s1_match) ,1,2),
           uniqueID = if_else(Season_sample==1, ID,s1_match  )) %>%
-  arrange( uniqueID ,Season_sample,time) %>%
-  filter( !(uniqueID %in% c('S1_5','S1_47','S1_28', 'S1_70', 'S1_71', 'S1_29'))) #these have duplicates and need to be addressed
+  arrange( uniqueID ,Season_sample,time) 
 
 
 ds.plot <- repeat_people %>%
@@ -785,6 +792,9 @@ gap1 <- gap1[-length(gap1)]
 gap2 <- which(sub2$pair_order==1) +1
 gap2 <- gap2[-length(gap2)]
 
+ sub3 <- ds.plot[107:124,]
+gap3 <- which(sub3$pair_order==1) +1
+gap3 <- gap3[-length(gap3)]
 
 #First half
 heat1 <- (pheatmap(sub1[,c('1','2','3','4','5','6')], 
@@ -810,7 +820,20 @@ heat2 <- (pheatmap(sub2[,c('1','2','3','4','5','6')],
                    breaks=breakslist,
                    legend=F,
                    labels_col = weeks))
-grid.arrange(heat1[[4]],heat2[[4]],ncol=2)
+
+heat3 <- (pheatmap(sub3[,c('1','2','3','4','5','6')], 
+                   cluster_cols = F, 
+                   cluster_rows = F, 
+                   gaps_row = gap3,
+                   labels_row = sub3$labels,
+                   cellwidth = 9,
+                   cellheight = 9,
+                   color=colorRampPalette(c('red4','red','darkorange','orange','gold','lightgoldenrod1','white','white'))(length(breakslist)),
+                   breaks=breakslist,
+                   legend=F,
+                   labels_col = weeks))
+
+grid.arrange(heat1[[4]],heat2[[4]], heat3[[4]], ncol=3)
 
 
 ```

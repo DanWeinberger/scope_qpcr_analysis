@@ -594,6 +594,31 @@ ggplot(d1.m, aes(x=season, stratum=variable,alluvium=variable,fill=variable,labe
   facet_wrap(~Gender)
 ```
 
+Child contact frequency vs intensity
+child contact often: 0= none reported, 1=Daily; 2=every few days; 3= once or twice a month
+child contact hours: 0= none reported, 1=Daily; 2=every few days; 3= once or twice a month
+
+Hours with kids?
+1= < 4 hours (just a morning or afternoon or evening) 
+2= 4-8 hours (full day) 
+3= 8+ hours (longer visit such as day care or overnight)
+```{r}
+t13 <-  pcr_survey %>%
+  filter(child_contact != 9999) %>% #must answer question...lots of missing surveys in S1
+  mutate(child_contact_often = if_else(is.na(child_contact_often) |child_contact_often==999,0,child_contact_often) ) %>%
+  group_by(child_contact_often, child_contact_hours ) %>%
+  summarize(N=n()) %>%
+  ungroup() %>%
+  group_by(child_contact_often) %>%
+  mutate(Percent= round(100*N/sum(N),2)) %>%
+  filter(child_contact_often %in% c(1,2,3))
+
+t13.t <- as_grouped_data(x = t13, groups = c("child_contact_often"), columns = NULL)
+
+flextable(t13.t) 
+
+```
+
 Just among those who have contact with kids 1-10y
 ```{r}
 t13a <-  pcr_survey %>%
