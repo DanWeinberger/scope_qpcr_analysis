@@ -113,6 +113,11 @@ lytA
 lyta.plot <- heat.fun(target='lyta')
 
 ```
+serotype
+```{r}
+
+```
+
 
 Contacts
 

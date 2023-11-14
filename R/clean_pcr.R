@@ -221,7 +221,7 @@ combine_audit_pos <- bind_rows(s1_audit, s2_audit) %>%
          lyta_valid=lytA_ct,
           piab_valid=piab_ct  ) %>%
   mutate(ID=paste0('S',season,'_', participant)) %>%
-  dplyr::select(time, ID, lyta_valid, piab_valid) 
+  dplyr::select(time, ID, lyta_valid, piab_valid,serotype,serotype_ct ) 
 
 d1.ds.b <- d1.ds.a %>%
   full_join(combine_audit_pos, by=c('ID','time')) %>%
@@ -248,7 +248,7 @@ d1.ds.b %>%
 d1.ds <- d1.ds.b %>%
   mutate( lyta = lyta_valid,
           piab=piab_valid) %>%
-  dplyr::select(Household, ID, time, lyta, piab, HH_order)
+  dplyr::select(Household, ID, time, lyta, piab, serotype,serotype_ct,HH_order)
 # d1.ds <- d1.ds %>%
 #   mutate(  piab = if_else(ID=='S2_2' & time==6, 38.34,
 #                   if_else(ID=='S2_24' & time==2, 38.62, 

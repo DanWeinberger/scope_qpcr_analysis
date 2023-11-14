@@ -321,6 +321,32 @@ t5 <- as_grouped_data(x = t5, groups = c("recent_runny_nose"), columns = NULL)
 flextable(t5) 
 ```
 
+```{r}
+pcr_survey %>%
+  filter(piab<40) %>%
+  group_by(recent_runny_nose) %>%
+  summarize(piab=mean(piab), N=n())
+
+pcr_survey %>%
+  filter(piab<40) %>%
+  group_by(recent_nasal) %>%
+  summarize(piab=mean(piab) ,
+            N=n())
+
+pcr_survey %>%
+  filter(piab<40) %>%
+  group_by(recent_nasal) %>%
+  summarize(piab=mean(piab) ,
+            N=n())
+
+pcr_survey %>%
+  filter(piab<40) %>%
+  group_by(diabetes) %>%
+  summarize(piab=mean(piab) ,
+            N=n())
+```
+
+
 
 -   Percent positive by Pneumococcal vaccine (could be PCV or ppv23)
 
