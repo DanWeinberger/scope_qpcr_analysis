@@ -10,6 +10,7 @@ output:
 knitr::opts_chunk$set(echo = FALSE)
 
 library(dplyr)
+library(geepack)
 options(dplyr.summarise.inform = FALSE)
 library(ggplot2)
 library(ggalluvial)
@@ -23,6 +24,7 @@ library(msm)
 library(patchwork)
 library(gridExtra)
 library(pheatmap)
+
 library(RColorBrewer)
 library(table1)
 source('heat.fun.R')
@@ -30,6 +32,7 @@ source('heat.fun.contact.R')
 source('./R/clean_pcr.R')
 
 source('./R/clean_s1_surveys.R')
+source('./R/confint.geeglm.R')
 source('./R/clean_s2_surveys.R')
 clean_pcr <- clean_pcr_fun()
 
@@ -1091,7 +1094,7 @@ Assumes missing survey is no contact with kids...need to clean this up a bit (e.
 
 ```{r}
 pcr_survey_mod <-  pcr_survey %>%
-    filter(child_contact_13_23m!=9999 & !is.na(piab_pos)) %>%
+    filter( !is.na(piab_pos)) %>%
   mutate( child_contact_13_23m = if_else(child_contact_13_23m==9999,0, child_contact_13_23m),
                                child_contact_24_59m = if_else(child_contact_24_59m==9999,0, child_contact_24_59m),
                                 child_contact_5_10y = if_else(child_contact_5_10y==9999,0, child_contact_5_10y),
@@ -1121,9 +1124,24 @@ summary(mod1)
 ```
 
 Generalized estimating equation to account for correlation within individuals
+```{r}
+pcr_survey_mod_gee <- pcr_survey_mod %>%
+  mutate( 
+    combined_ID = if_else(is.na(s1_match), ID, s1_match),
+    combined_ID=as.factor(combined_ID),
+          ) 
 
-```{r, echo=T, eval=F}
-mod1.gee <- gee(piab_pos ~ child_contact_u12m+ child_contact_13_23m + child_contact_24_59m + child_contact_5_10y + child_contact_over10y,id=pcr_survey$ID, data=pcr_survey_mod, family=binomial(link='log'), corstr="exchangeable")
+
+test1 <- pcr_survey_mod_gee %>% group_by(combined_ID) %>% summarize(N=n()) %>% ungroup()
+table(test1$N)
+```
+
+
+```{r, echo=T}
+
+mod1.gee <- geeglm(piab_pos ~ child_contact_u12m+ child_contact_13_23m + child_contact_24_59m + child_contact_5_10y + child_contact_over10y,id=pcr_survey_mod_gee$combined_ID, data=pcr_survey_mod_gee, family=binomial(link='log'), corstr="ar1")
+
+confint.geeglm(mod1.gee)
 ```
 
 ### Longitudinal data analysis
