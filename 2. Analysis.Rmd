@@ -243,6 +243,27 @@ t3 <- pcr_summary_long %>%
 
 flextable(t3)
 ```
+Positivity, but considering a person to be 1 subject if re-enrolled
+```{r}
+
+id_key <- pcr_survey %>%
+  dplyr::select(ID, s1_match) %>%
+  unique()
+
+t3 <- pcr_summary_long %>%
+  left_join(id_key, by='ID') %>%
+  mutate(common_ID= if_else(is.na(s1_match), ID, s1_match)) %>%
+    filter(piab != 9999) %>%
+  mutate(piab_pos = if_else(piab < 40,1,0),
+         lyta_pos = if_else(lyta < 40,1,0),
+         season=substr(common_ID,1,2) ) %>%
+  group_by(common_ID) %>%
+  summarize(any_pos_piab = max(piab_pos)) %>%
+  ungroup() %>%
+  summarize(N_people=n(), N_pos=sum(any_pos_piab), `Percent Positive People`=round(100*mean(any_pos_piab),1))
+
+flextable(t3)
+```
 
 ```{r}
 t3 <- pcr_summary_long %>%
@@ -1020,6 +1041,7 @@ t17  <- pcr_survey %>%
 #t17 <- as_grouped_data(x = t17, groups = c("Gender"), columns = NULL)
 
 flextable(t17)
+
 ```
 
 
@@ -1143,7 +1165,35 @@ mod1.gee <- geeglm(piab_pos ~ child_contact_u12m+ child_contact_13_23m + child_c
 
 confint.geeglm(mod1.gee)
 ```
+```{r}
+mod1 <- geeglm(piab_pos ~ child_contact_often, data=pcr_survey_mod_gee2,  family=binomial(link='log'), corstr="ar1",id=pcr_survey_mod_gee2$combined_ID,)
 
+confint.geeglm(mod1)
+```
+
+
+```{r}
+
+pcr_survey_mod_gee2  <- pcr_survey_mod_gee %>%
+  mutate( intensity_index = if_else(child_contact_hours==3 & child_contact_often==1,1,
+                            if_else(child_contact_hours==3 & child_contact_often==2,2,
+                            if_else(child_contact_hours==3 & child_contact_often==3,3,
+                            if_else(child_contact_hours==2 & child_contact_often==1,4,    
+                            if_else(child_contact_hours==2 & child_contact_often==2,5,
+                            if_else(child_contact_hours==2 & child_contact_often==3,6,
+                            if_else(child_contact_hours==1 & child_contact_often==1,7,
+                            if_else(child_contact_hours==1 & child_contact_often==2,8,
+                            if_else(child_contact_hours==1 & child_contact_often==3,9,999))))))))),
+          intensity_index=if_else(is.na(intensity_index),999,intensity_index),
+          intensity_index=as.factor(intensity_index)) %>%
+  filter(!is.na(piab_pos) & !is.na(combined_ID)) %>%
+  arrange(ID, season, time)
+
+
+mod1 <- geeglm(piab_pos ~ intensity_index, data=pcr_survey_mod_gee2,  family=binomial(link='log'), corstr="ar1",id=pcr_survey_mod_gee2$combined_ID,)
+
+confint.geeglm(mod1)
+```
 ### Longitudinal data analysis
 
 Use a Markov transition model with 2 states (colonized, uncolonized) to quantify acquisition and clearance rates and correlates of both. The model below estimates acquisition and clearance rates, and teh effect of recent contact with a child \<12m on acquisition rates
