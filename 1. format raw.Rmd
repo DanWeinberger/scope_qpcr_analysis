@@ -753,16 +753,16 @@ msm.mod5
 
 We have a number of participants in both seasons
 
-```{r, fig.width=6, fig.height=9}
+```{r, fig.width=6, fig.height=7}
 
-#fixes error on key
-ds.c2 <- ds.c %>%
-  mutate(s1_match = if_else(ID=='S2_26','S1_93', s1_match),
-         s1_match = if_else(ID=='S2_25','S1_92', s1_match),
-         s1_match = if_else(ID=='S2_55','S1_57', s1_match),
-        s1_match = if_else(ID=='S2_56','S1_56', s1_match)
-         
-         )
+#fixes error on key--seems to have been fixed on original now
+ ds.c2 <- ds.c # %>%
+#   mutate(s1_match = if_else(ID=='S2_26','S1_93', s1_match),
+#          s1_match = if_else(ID=='S2_25','S1_92', s1_match),
+#          s1_match = if_else(ID=='S2_55','S1_57', s1_match),
+#         s1_match = if_else(ID=='S2_56','S1_56', s1_match)
+#          
+#          )
 s1_repeats <- unique(ds.c2$s1_match) #which people from S1 are also in S2?
 
 
@@ -774,32 +774,29 @@ repeat_people <- ds.c2 %>%
 
 
 ds.plot <- repeat_people %>%
-    select(uniqueID,Season_sample, time, piab) %>%
-  dcast( uniqueID+ Season_sample ~time) %>%
-  arrange(uniqueID,Season_sample) %>%
-  group_by(uniqueID) %>%
-  mutate(pair_order= row_number())
+  mutate(combined_ID = if_else(is.na(s1_match),ID, s1_match),
+         piab_pos= 1*piab<40,
+         uniqueID_Num = as.numeric(substring(uniqueID,4))) %>%
+  group_by(uniqueID_Num) %>%
+  mutate(N_pos=sum(piab_pos)) %>%
+  ungroup() %>%
+  filter(N_pos>0) %>%
+    select(uniqueID_Num,ID,Season_sample, time, piab) %>%
+  dcast( uniqueID_Num+ ID+Season_sample ~time, value.var='piab') %>%
+  arrange(uniqueID_Num,Season_sample) %>%
+  group_by(uniqueID_Num) %>%
+  mutate(pair_order= row_number()) 
 
- cut3 = 47 
- cut4=95
- cut5=141
+ cut3 = 34 
 
- ds.plot$labels <- paste(ds.plot$uniqueID, ds.plot$Season_sample, sep='_')
+ ds.plot$labels <- ds.plot$ID
 breakslist<-seq(15,45,by=1)
 weeks<- paste0('Week ', c(0,2,4,6,8,10)) 
 
 
- sub1 <- ds.plot[1:52,]
+ sub1 <- ds.plot
 gap1 <- which(sub1$pair_order==1) +1
-gap1 <- gap1[-length(gap1)]
 
- sub2 <- ds.plot[53:106,]
-gap2 <- which(sub2$pair_order==1) +1
-gap2 <- gap2[-length(gap2)]
-
- sub3 <- ds.plot[107:124,]
-gap3 <- which(sub3$pair_order==1) +1
-gap3 <- gap3[-length(gap3)]
 
 #First half
 heat1 <- (pheatmap(sub1[,c('1','2','3','4','5','6')], 
@@ -814,32 +811,7 @@ heat1 <- (pheatmap(sub1[,c('1','2','3','4','5','6')],
                    legend=F,
                    labels_col = weeks))
 
-heat2 <- (pheatmap(sub2[,c('1','2','3','4','5','6')], 
-                   cluster_cols = F, 
-                   cluster_rows = F, 
-                   gaps_row = gap2,
-                   labels_row = sub2$labels,
-                   cellwidth = 9,
-                   cellheight = 9,
-                   color=colorRampPalette(c('red4','red','darkorange','orange','gold','lightgoldenrod1','white','white'))(length(breakslist)),
-                   breaks=breakslist,
-                   legend=F,
-                   labels_col = weeks))
-
-heat3 <- (pheatmap(sub3[,c('1','2','3','4','5','6')], 
-                   cluster_cols = F, 
-                   cluster_rows = F, 
-                   gaps_row = gap3,
-                   labels_row = sub3$labels,
-                   cellwidth = 9,
-                   cellheight = 9,
-                   color=colorRampPalette(c('red4','red','darkorange','orange','gold','lightgoldenrod1','white','white'))(length(breakslist)),
-                   breaks=breakslist,
-                   legend=F,
-                   labels_col = weeks))
-
-grid.arrange(heat1[[4]],heat2[[4]], heat3[[4]], ncol=3)
-
+heat1
 
 ```
 
