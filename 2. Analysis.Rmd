@@ -55,20 +55,17 @@ In the laboratory, saliva was culture enriched and tested for *lytA* and *piaB w
 ### Descriptive statistics
 
 ```{r}
-pcr_summary_long <- readRDS('./Data/PCR_compiled.rds') %>%
-  mutate(ID = gsub('ctl','',ID)) %>%
-  filter(ID!='S2_102')
-
 pcr_survey <- readRDS('./Data./pcr_survey_combined.rds') %>%
   mutate(Gender = if_else(Gender %in% c('F','Female'),'F',Gender),
          Gender = if_else(Gender %in% c('M','Male'),'M',Gender),
          child_contact_often= if_else(is.na(child_contact_often),999,child_contact_often)) %>%
   filter(piab != 9999) %>%
+      mutate(combined_ID = if_else(is.na(s1_match),ID, s1_match)) %>%
   mutate(piab_pos = if_else(piab < 40,1,0),
          lyta_pos = if_else(lyta < 40,1,0),
          season=substr(ID,1,2),
           Gender=if_else(ID=='S2_77' & is.na(Gender), 'F',Gender)) %>%
-  group_by(ID) %>%
+  group_by(combined_ID) %>%
   #fill missing values when info is on survey for another time point
   mutate( diabetes = if_else(diabetes==999 | is.na(diabetes),-999,diabetes),
           diabetes = max(diabetes, na.rm=T),
@@ -81,7 +78,34 @@ pcr_survey <- readRDS('./Data./pcr_survey_combined.rds') %>%
           asthma= as.factor(if_else(asthma==-999,999, asthma))
           ) %>%
   tidyr::fill(.,education, .direction='downup') %>%
-  ungroup()
+  ungroup() 
+
+
+
+
+hh_match <- pcr_survey %>%
+  mutate(season=substr(ID,1,2)) %>%
+  filter(season=='S1') %>%
+  dplyr::select(ID, Household ) %>%
+  rename(s1_match_hh=Household)
+
+id_key <- pcr_survey %>%
+  dplyr::select(ID, s1_match) %>%
+  unique() %>%
+  filter(!is.na(s1_match)) %>%
+  left_join(hh_match, by=c('s1_match'='ID')) %>%
+  unique()
+
+
+pcr_summary_long <- readRDS('./Data/PCR_compiled.rds') %>%
+  mutate(ID = gsub('ctl','',ID)) %>%
+  filter(ID!='S2_102') %>%
+  left_join(id_key, by='ID') %>%
+  mutate(combined_ID = if_else(is.na(s1_match),ID, s1_match))
+
+
+pcr_summary_long
+
 
 # diabetes <- pcr_survey %>%
 #   group_by(Household) %>%
@@ -99,8 +123,8 @@ Age summary
 
 ```{r}
 unique.age <- pcr_survey %>%
-  group_by(ID) %>%
-  summarize(Age=mean(Age, na.rm=T))
+  group_by(combined_ID) %>%
+  summarize(Age=min(Age), N=n())
 
 hist(unique.age$Age, main='Distribution of ages', xlab='Age(y)')
 
@@ -112,8 +136,17 @@ unique.age %>%
 ```{r}
 
 
-first_visit <- pcr_survey %>% filter(time==1 | (ID=='S1_6' & time==2)) %>%
-  mutate(Race=tolower(Race), Ethnicity=tolower(Ethnicity), smoke=as.factor(smoke), pneu_vax=as.factor(pneu_vax), flu_shot=as.factor(flu_shot) ,  asthma=as.factor(asthma),
+first_visit <- pcr_survey %>% 
+  group_by(combined_ID) %>%
+  arrange(ID, time) %>%
+  mutate(visitN_both=row_number()) %>%
+  ungroup() %>%
+  filter(visitN_both==1) %>%
+  mutate(Race=tolower(Race), Ethnicity=tolower(Ethnicity), smoke=as.factor(smoke), pneu_vax=as.factor(pneu_vax), flu_shot=as.factor(flu_shot) , 
+                  Race=if_else(Race=='unknown' |is.na(Race), 'Missing', Race),
+         
+         Ethnicity=if_else(Ethnicity=='unknown'|is.na(Ethnicity), 'Missing', Ethnicity),
+         asthma=as.factor(asthma),
          education=toupper(education),
          education_level= if_else(grepl('HIGH', education) |
                                     grepl("GED",education) , 'HS',
@@ -129,7 +162,8 @@ first_visit <- pcr_survey %>% filter(time==1 | (ID=='S1_6' & time==2)) %>%
                                                     grepl('J.D.', education)|
                                                     grepl('MPH', education)|
                                                     grepl('MD', education)|
-                                                     grepl('DOCTORATE', education), 'Graduate', 'Unknown')))
+                                                     grepl('DOCTORATE', education), 'Graduate', 'Unknown'))),
+         
   )
 
 
@@ -137,7 +171,7 @@ tab1 <- table1( ~Age + Gender + Race +Ethnicity + activity_family + activity_fri
 
 tab1 <- as.data.frame(tab1)
 flextable(tab1)
-
+write.csv(tab1, "./Data/table1.csv")
 
 ```
 
@@ -224,7 +258,18 @@ flextable(t2)
 
 pcr_summary_long %>%
   filter(!is.na(Household)) %>%
-  summarize(N_hh=length(unique(pcr_summary_long$Household)), N_people=length(unique(pcr_summary_long$ID)))
+  mutate(combined_HH_ID = if_else(is.na(s1_match_hh), Household, s1_match_hh)) %>%
+  summarize(N_hh=length(unique(combined_HH_ID)), N_people=length(unique(combined_ID)))
+
+
+pcr_summary_long %>%
+  filter(!is.na(Household)) %>%
+  mutate(combined_HH_ID = if_else(is.na(s1_match_hh), Household, s1_match_hh),
+         season=substr(ID,1,2)) %>%
+  group_by(season) %>%
+  summarize(N_hh=length(unique(combined_HH_ID)), N_people=length(unique(combined_ID)))
+
+
 ```
 
 -   Percent of people who were positive (period prevalence)
@@ -236,34 +281,14 @@ t3 <- pcr_summary_long %>%
   mutate(piab_pos = if_else(piab < 40,1,0),
          lyta_pos = if_else(lyta < 40,1,0),
          season=substr(ID,1,2) ) %>%
-  group_by(ID) %>%
+  group_by(combined_ID) %>%
   summarize(any_pos_piab = max(piab_pos)) %>%
   ungroup() %>%
   summarize(N_people=n(), N_pos=sum(any_pos_piab), `Percent Positive People`=round(100*mean(any_pos_piab),1))
 
 flextable(t3)
 ```
-Positivity, but considering a person to be 1 subject if re-enrolled
-```{r}
 
-id_key <- pcr_survey %>%
-  dplyr::select(ID, s1_match) %>%
-  unique()
-
-t3 <- pcr_summary_long %>%
-  left_join(id_key, by='ID') %>%
-  mutate(common_ID= if_else(is.na(s1_match), ID, s1_match)) %>%
-    filter(piab != 9999) %>%
-  mutate(piab_pos = if_else(piab < 40,1,0),
-         lyta_pos = if_else(lyta < 40,1,0),
-         season=substr(common_ID,1,2) ) %>%
-  group_by(common_ID) %>%
-  summarize(any_pos_piab = max(piab_pos)) %>%
-  ungroup() %>%
-  summarize(N_people=n(), N_pos=sum(any_pos_piab), `Percent Positive People`=round(100*mean(any_pos_piab),1))
-
-flextable(t3)
-```
 
 ```{r}
 t3 <- pcr_summary_long %>%
@@ -1117,33 +1142,18 @@ Assumes missing survey is no contact with kids...need to clean this up a bit (e.
 ```{r}
 pcr_survey_mod <-  pcr_survey %>%
     filter( !is.na(piab_pos)) %>%
-  mutate( child_contact_13_23m = if_else(child_contact_13_23m==9999,0, child_contact_13_23m),
-                               child_contact_24_59m = if_else(child_contact_24_59m==9999,0, child_contact_24_59m),
-                                child_contact_5_10y = if_else(child_contact_5_10y==9999,0, child_contact_5_10y),
-    N_child_contact_1_10 = child_contact_13_23m + child_contact_24_59m + child_contact_5_10y,
+  mutate( #child_contact_13_23m = #if_else(child_contact_13_23m==9999,0, child_contact_13_23m),
+     #                          child_contact_24_59m = #if_else(child_contact_24_59m==9999,0, child_contact_24_59m),
+   #                             child_contact_5_10y = #if_else(child_contact_5_10y==9999,0, child_contact_5_10y),
+   
     child_contact_hours=as.factor(child_contact_hours),
     child_contact_often =as.factor(child_contact_often))
   
 ```
 
-```{r, echo=T, eval=F}
-        mod1 <- glm(piab_pos ~ child_contact_u12m + child_contact_13_23m + child_contact_24_59m + child_contact_5_10y + child_contact_over10y , family='binomial', data=pcr_survey_mod)
-
-summary(mod1)
-```
 
 
 Test frequency of contact and N contacts age 1-10; each of which is associated in univariate analysis.
-
-```{r}
-   mod1 <- glm(piab_pos ~  child_contact_often  +  child_contact_24_59m + child_contact_5_10y  , family='binomial', data=pcr_survey_mod)
-summary(mod1)
-```
-
-```{r}
-   mod1 <- glm(piab_pos ~  diabetes +pneu_vax  +child_contact_often+child_contact_u12m + child_contact_13_23m + child_contact_24_59m + child_contact_5_10y + child_contact_over10y, family='binomial', data=pcr_survey_mod)
-summary(mod1)
-```
 
 Generalized estimating equation to account for correlation within individuals
 ```{r}
@@ -1151,24 +1161,64 @@ pcr_survey_mod_gee <- pcr_survey_mod %>%
   mutate( 
     combined_ID = if_else(is.na(s1_match), ID, s1_match),
     combined_ID=as.factor(combined_ID),
-          ) 
+    child_contact_1_10y = if_else(child_contact_13_23m==1 | child_contact_24_59m==1 | child_contact_5_10y==1,1,
+                if_else(child_contact_13_23m==9999,9999,0)),
+    child_contact_1_10y=as.factor(child_contact_1_10y),
+    child_contact_u12m=as.factor(child_contact_u12m),
+    child_contact_13_23m=as.factor(child_contact_13_23m),
+    child_contact_24_59m=as.factor(child_contact_24_59m),
+    child_contact_5_10y=as.factor(child_contact_5_10y),
+    child_contact_over10y=as.factor(child_contact_over10y)
+    
+    #child_contact_u12m=if_else(child_contact_u12m==9999,0,child_contact_u12m),
+    # child_contact_over10y =if_else(child_contact_over10y ==9999,0,child_contact_over10y )
+    
+   
+                                 
+                                 )
+         
 
 
 test1 <- pcr_survey_mod_gee %>% group_by(combined_ID) %>% summarize(N=n()) %>% ungroup()
 table(test1$N)
 ```
 
+```{r}
+mod1 <- geeglm(piab_pos ~ child_contact_often, data=pcr_survey_mod_gee,  family=binomial(link='log'), corstr="exchangeable",id=pcr_survey_mod_gee$combined_ID,)
+
+confint.geeglm(mod1)
+```
 
 ```{r, echo=T}
 
-mod1.gee <- geeglm(piab_pos ~ child_contact_u12m+ child_contact_13_23m + child_contact_24_59m + child_contact_5_10y + child_contact_over10y,id=pcr_survey_mod_gee$combined_ID, data=pcr_survey_mod_gee, family=binomial(link='log'), corstr="ar1")
+mod1.gee <- geeglm(piab_pos ~ child_contact_u12m ,id=pcr_survey_mod_gee$combined_ID, data=pcr_survey_mod_gee, family=binomial(link='log'), corstr="exchangeable")
+
+mod2.gee <- geeglm(piab_pos ~  child_contact_13_23m,id=pcr_survey_mod_gee$combined_ID, data=pcr_survey_mod_gee, family=binomial(link='log'), corstr="exchangeable")
+
+mod3.gee <- geeglm(piab_pos ~  child_contact_24_59m   ,id=pcr_survey_mod_gee$combined_ID, data=pcr_survey_mod_gee, family=binomial(link='log'), corstr="exchangeable")
+
+mod4.gee <- geeglm(piab_pos ~  child_contact_5_10y ,id=pcr_survey_mod_gee$combined_ID, data=pcr_survey_mod_gee, family=binomial(link='log'), corstr="exchangeable")
+
+mod5.gee <- geeglm(piab_pos ~  child_contact_over10y,id=pcr_survey_mod_gee$combined_ID, data=pcr_survey_mod_gee, family=binomial(link='log'), corstr="exchangeable")
+
+# mod6.gee <- geeglm(piab_pos ~child_contact_u12m+ child_contact_1_10y,id=pcr_survey_mod_gee$combined_ID, data=pcr_survey_mod_gee, family=binomial(link='log'), corstr="exchangeable")
 
 confint.geeglm(mod1.gee)
-```
-```{r}
-mod1 <- geeglm(piab_pos ~ child_contact_often, data=pcr_survey_mod_gee2,  family=binomial(link='log'), corstr="ar1",id=pcr_survey_mod_gee2$combined_ID,)
+confint.geeglm(mod2.gee)
+confint.geeglm(mod3.gee)
+confint.geeglm(mod4.gee)
+confint.geeglm(mod5.gee)
 
-confint.geeglm(mod1)
+```
+diabetes GEE
+```{r}
+pcr_survey_mod_gee <- pcr_survey_mod_gee %>%
+  mutate(diabetes=relevel(diabetes, ref='0'))
+
+mod6.gee <- geeglm(piab_pos ~  diabetes,id=pcr_survey_mod_gee$combined_ID, data=pcr_survey_mod_gee, family=binomial(link='log'), corstr="exchangeable")
+
+
+confint.geeglm(mod6.gee)
 ```
 
 
@@ -1190,25 +1240,26 @@ pcr_survey_mod_gee2  <- pcr_survey_mod_gee %>%
   arrange(ID, season, time)
 
 
-mod1 <- geeglm(piab_pos ~ intensity_index, data=pcr_survey_mod_gee2,  family=binomial(link='log'), corstr="ar1",id=pcr_survey_mod_gee2$combined_ID,)
+mod1 <- geeglm(piab_pos ~ intensity_index, data=pcr_survey_mod_gee2,  family=binomial(link='log'), corstr="exchangeable",id=pcr_survey_mod_gee2$combined_ID,)
 
 confint.geeglm(mod1)
 ```
+
+
 ### Longitudinal data analysis
 
 Use a Markov transition model with 2 states (colonized, uncolonized) to quantify acquisition and clearance rates and correlates of both. The model below estimates acquisition and clearance rates, and teh effect of recent contact with a child \<12m on acquisition rates
 
 ```{r, echo=T, eval=T}
 mod.df <- pcr_survey_mod %>%
-  filter(child_contact_13_23m!=9999 & !is.na(piab_pos)) %>%
+  filter( !is.na(piab_pos)) %>%
   mutate(ID=as.factor(ID))
 
 mod.df$child_contact_u5 <- 
   mod.df$child_contact_u12m + mod.df$child_contact_13_23m + mod.df$child_contact_24_59m
 
-mod.df$child_contact_1_10 <-  mod.df$child_contact_13_23m + mod.df$child_contact_24_59m +
-mod.df$child_contact_5_10y
-
+mod.df$child_contact_1_10 <-  if_else(mod.df$child_contact_13_23m==1 |  mod.df$child_contact_24_59m==1|mod.df$child_contact_5_10y==1,1,0)
+mod.df$child_contact_1_10 =if_else(mod.df$child_contact_13_23m==9999,9999, mod.df$child_contact_1_10)
 
 #N contacts
 mod.df$child_contact_1_5 <- mod.df$child_contact_13_23m + mod.df$child_contact_24_59m
@@ -1234,46 +1285,35 @@ q1 <- rbind(c( 0,0.01),
 
 l1 <- l1[order(l1$ID, l1$day),]
 
-l2 <- l1[, c('state','child_contact_u5','child_contact_1_5','child_contact','Gender','child_contact_u12m','child_contact_13_23m',"child_contact_24_59m","child_contact_5_10y",'child_contact_over10y','child_contact_1_10', 'ID','day', 'season','child_contact_often','child_contact_hours', 'diabetes')] %>%
+l2 <- l1[, c('state','child_contact_u5','child_contact_1_5','child_contact','Gender','child_contact_u12m','child_contact_13_23m',"child_contact_24_59m","child_contact_5_10y",'child_contact_over10y','child_contact_1_10', 'ID','day','time', 'season','child_contact_often','child_contact_hours', 'diabetes','piab_pos')] %>%
   mutate(child_contact_2_10y = if_else( (child_contact_24_59m==1 |child_contact_5_10y==1) & child_contact !=9999,1,
                                        if_else(child_contact_24_59m==0  & child_contact_5_10y==0 & child_contact !=9999,0, 
                                                if_else(child_contact==9999 ,9999, 9999) ) )) %>%
-  mutate(diabetes=relevel(diabetes, ref='0'))
+  mutate(diabetes=relevel(diabetes, ref='0'),
+            child_contact_u10=if_else(child_contact_1_10==1|child_contact_u12m==1,1,child_contact_1_10),
+    child_contact_u10=as.factor(child_contact_u10),
+    
+         child_contact_1_10=as.factor(child_contact_1_10),
+    child_contact_u12m=as.factor(child_contact_u12m),
+    child_contact_13_23m=as.factor(child_contact_13_23m),
+    child_contact_24_59m=as.factor(child_contact_24_59m),
+    child_contact_5_10y=as.factor(child_contact_5_10y),
+    child_contact_over10y=as.factor(child_contact_over10y),
+    
+     )
+
+test <- l2 %>%
+  dplyr::select(state, day, ID, time,piab_pos)
 
 msm.mod0 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2)
 msm.mod0
 
-msm.mod1 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_contact_13_23m ))
-msm.mod1
-
-msm.mod1 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_contact_24_59m ))
-msm.mod1
-
-
-msm.mod1 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_contact_5_10y ))
-msm.mod1
-
-
-msm.mod1 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_contact_2_10y ))
-msm.mod1
-
-
-msm.mod1 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_contact_13_23m + child_contact_24_59m + child_contact_5_10y ))
-msm.mod1
-
-msm.mod1b <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_contact_1_5))
-msm.mod1b
-
-
-msm.mod1b <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_contact_u5))
-msm.mod1b
-
-msm.mod1c <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_contact_1_10))
+msm.mod1c <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_contact_u10))
 msm.mod1c
 
-#clearance rate as a function of child contacts?
-msm.mod1e <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list( "2-1" = ~ child_contact_1_10))
-msm.mod1e
+msm.mod1c <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list("1-2" = ~ child_contact_often))
+msm.mod1c
+
 
 ```
 
@@ -1308,8 +1348,6 @@ msm.mod1e <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l3,covariates = l
 msm.mod1e
 
 
-msm.mod1e <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l3,covariates = list( "1-2" = ~ child_contact_often1 , "2-1" = ~ child_contact_often1 ))
-msm.mod1e
 
 
 ```

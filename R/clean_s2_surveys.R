@@ -38,7 +38,7 @@ s1_demographics <- readRDS('./Data/confidential/s1_baseline_vars.rds') %>%
   mutate(`season 1 scope ID`=as.numeric(`season 1 scope ID`)) %>%
   dplyr::select(-MRN_cleaned) 
 
-s2_demographics_b <- read_excel('./Data/confidential/New Participants SCOPE_season 2.xlsx', sheet='repeat participant cheat sheet')
+s2_demographics_b <- read_excel('./Data/confidential/New Participants SCOPE_season 2 CORRECTED.xlsx', sheet='repeat participant cheat sheet')
 
 s2_demographics_b2 <- left_join(s2_demographics_b,s1_demographics, by="season 1 scope ID") %>%
   rename(ID=`season 2 scope ID`, s1_match=`season 1 scope ID`) %>%
@@ -111,6 +111,13 @@ s2_a <- s2_a %>%
   ungroup()
 
 N_contacts <- dcast(s2_a[c('ID','time','child_contact')], ID~time, fun.aggregate = max, na.rm=T, fill=9999, value.var='child_contact')
+
+
+# View(s2_a %>%
+#   mutate(female=if_else(Gender%in% c('F','Female'),1,0)) %>%
+#   group_by(Household) %>%
+#   filter(time==2) %>%
+#   summarize(female=sum(female)))
 
 out.list <- list('survey_and_pcr_s2'=s2_a,'contacts_wide_s2'=N_contacts)
 
