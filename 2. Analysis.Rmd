@@ -283,9 +283,10 @@ t3 <- pcr_summary_long %>%
   mutate(piab_pos = if_else(piab < 40,1,0),
          lyta_pos = if_else(lyta < 40,1,0),
          season=substr(ID,1,2) ) %>%
-  group_by(combined_ID) %>%
+  group_by(combined_ID,season) %>%
   summarize(any_pos_piab = max(piab_pos)) %>%
   ungroup() %>%
+  group_by(season) %>%
   summarize(N_people=n(), N_pos=sum(any_pos_piab), `Percent Positive People`=round(100*mean(any_pos_piab),1))
 
 flextable(t3)
