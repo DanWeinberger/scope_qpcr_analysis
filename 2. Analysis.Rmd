@@ -80,6 +80,7 @@ pcr_survey <- readRDS('./Data./pcr_survey_combined.rds') %>%
   tidyr::fill(.,education, .direction='downup') %>%
   ungroup() 
 
+write.csv(pcr_survey,'./Data/pcr_survey.csv')
 
 
 
@@ -106,6 +107,7 @@ pcr_summary_long <- readRDS('./Data/PCR_compiled.rds') %>%
 
 pcr_summary_long
 
+write.csv(pcr_summary_long,'./Data/pcr_summary_long.csv')
 
 # diabetes <- pcr_survey %>%
 #   group_by(Household) %>%
