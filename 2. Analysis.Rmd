@@ -224,6 +224,7 @@ piab.plot <- heat.fun(target='piab')
 
 -   Percent of tests that were positive, overall
 
+Table 2 overall
 ```{r}
 
 t1 <- pcr_summary_long %>%
@@ -884,17 +885,26 @@ t18 <- as_grouped_data(x = t18, groups = c('season'), columns = NULL)
 flextable(t18)
 ```
 
-##   Proportion positive, stratified by contacts
+##   Table 2: Proportion positive, stratified by contacts
 
     -   Contact with children \<5 years
     
 Between seasons, among people without reported child contact, prevalence is much lower; it is similar among those with a reported contact
 
+OVERALL
+```{r}
+t16  <- pcr_survey %>%
+  mutate(child_contact= if_else(is.na(child_contact)| child_contact==9999,9999,child_contact)) %>%
+  summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
+
+flextable(t16) 
+```
+
 ANY contact
 ```{r}
 t16  <- pcr_survey %>%
   mutate(child_contact= if_else(is.na(child_contact)| child_contact==9999,9999,child_contact)) %>%
-  group_by( child_contact,  ) %>%
+  group_by( child_contact  ) %>%
   summarize(N=n(), N_pos=sum(piab_pos), Pct_Pos=round(100*mean(piab_pos),1)) 
 
 t16 <- as_grouped_data(x = t16, groups = c("child_contact"), columns = NULL)
@@ -1164,6 +1174,8 @@ pcr_survey_mod_gee <- pcr_survey_mod %>%
   mutate( 
     combined_ID = if_else(is.na(s1_match), ID, s1_match),
     combined_ID=as.factor(combined_ID),
+    
+    
     child_contact_1_10y = if_else(child_contact_13_23m==1 | child_contact_24_59m==1 | child_contact_5_10y==1,1,
                 if_else(child_contact_13_23m==9999,9999,0)),
     child_contact_1_10y=as.factor(child_contact_1_10y),
@@ -1187,7 +1199,10 @@ table(test1$N)
 ```
 
 ```{r}
-mod1 <- geeglm(piab_pos ~ child_contact_often, data=pcr_survey_mod_gee,  family=binomial(link='log'), corstr="exchangeable",id=pcr_survey_mod_gee$combined_ID,)
+mod1 <- geeglm(piab_pos ~ child_contact_often, 
+               data=pcr_survey_mod_gee,  
+               family=binomial(link='log'),
+               corstr="exchangeable",id=pcr_survey_mod_gee$combined_ID,)
 
 confint.geeglm(mod1)
 ```
@@ -1327,8 +1342,8 @@ Diabetes
 msm.mod0 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list( "1-2" = ~ diabetes))
 msm.mod0
 
-msm.mod0 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list( "2-1" = ~ diabetes))
-msm.mod0
+# msm.mod0 <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2,covariates = list( "2-1" = ~ diabetes))
+# msm.mod0
 
 
 ```
@@ -1397,6 +1412,7 @@ dichotomized contacts age 1-10y
 ```{r}
 
 msm.mod1d <- msm( state~ day ,  subject=ID , qmatrix=q1 , data=l2.cat,covariates = list("1-2" = ~ child_contact1_10_dic))
+
 msm.mod1d
 ```
 
